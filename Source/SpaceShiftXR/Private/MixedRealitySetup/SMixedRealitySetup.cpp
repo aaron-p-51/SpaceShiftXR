@@ -3,6 +3,8 @@
 
 #include "MixedRealitySetup/SMixedRealitySetup.h"
 
+#include "MixedRealitySetup/SMixedRealitySetupCommands.h"
+
 DEFINE_LOG_CATEGORY(SMixedRealitySetup)
 
 // Sets default values
@@ -13,9 +15,84 @@ ASMixedRealitySetup::ASMixedRealitySetup()
 
 }
 
+
+
+void ASMixedRealitySetup::BuildCommandQueue()
+{
+	Commands.Empty();
+
+	TArray<ESetupCommand> BuildCommands;
+#if PLATFORM_ANDROID
+	BuildCommands = AndroidCommands;
+#elif WITH_EDITOR
+	BuildCommands = EditorCommands;
+#endif
+
+	for (auto SetupCommand : BuildCommands)
+	{
+		if (SetupCommand == ESetupCommand::ESCRequestUseSceneData)
+		{
+			auto Command = USRequestUseSceneDataCommand::MakeCommand(this);
+			UE_LOG(SMixedRealitySetup, Log, TEXT("Add USRequestUseSceneDataCommand"));
+			Commands.Enqueue(Command);
+		}
+	}
+
+
+
+
+}
+
+void ASMixedRealitySetup::RunNextSetupCommand()
+{
+	if (!Commands.IsEmpty())
+	{
+		TObjectPtr<USMixedRealitySetupCommand> NextCommand = nullptr;
+		if (Commands.Dequeue(NextCommand))
+		{
+			NextCommand->Execute();
+		}
+	}
+}
+
+
+
+
+
 void ASMixedRealitySetup::MixedRealitySetupCommandComplete(USMixedRealitySetupCommand* Command, bool Result)
 {
-	UE_LOG(SMixedRealitySetup, Log, TEXT("Command Complete: %s"), *Command->GetName());
+	UE_LOG(LogTemp, Warning, TEXT("MixedRealitySetupCommandComplete: 1"));
+	if (!Command)
+	{
+		UE_LOG(SMixedRealitySetup, Error, TEXT("Unknown Command Completed"));
+		return;
+	}
+
+	if (Result)
+	{
+		UE_LOG(SMixedRealitySetup, Log, TEXT("%s Success"), *Command->GetName());
+	}
+	else
+	{
+		UE_LOG(SMixedRealitySetup, Log, TEXT("%s Failed"), *Command->GetName());
+		//SetupState = ESetupState::ESS_Failed;
+	}
+
+	Command->ConditionalBeginDestroy();
+
+	if (!Commands.IsEmpty())
+	{
+		RunNextSetupCommand();
+	}
+	else
+	{
+		CompleteSetup();
+	}
+}
+
+void ASMixedRealitySetup::CompleteSetup()
+{
+	UE_LOG(SMixedRealitySetup, Log, TEXT("CompleteSetup"));
 }
 
 // Called when the game starts or when spawned
@@ -23,9 +100,17 @@ void ASMixedRealitySetup::BeginPlay()
 {
 	Super::BeginPlay();
 
-	auto Command = USMyTestCommand::MakeCommand(this);
-	Command->Execute();
+	//auto Command = USMyTestCommand::MakeCommand(this);
+	//Command->Execute();
 	
+
+}
+
+void ASMixedRealitySetup::Run()
+{
+	BuildCommandQueue();
+
+	RunNextSetupCommand();
 }
 
 // Called every frame

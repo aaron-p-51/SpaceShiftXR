@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "SMixedRealityCommandIssuer.h"
+#include "SMixedRealitySetupTypes.h"
 #include "SMixedRealitySetup.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(SMixedRealitySetup, Log, All);
@@ -18,7 +19,26 @@ public:
 	// Sets default values for this actor's properties
 	ASMixedRealitySetup();
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Android Configuration")
+	TArray<ESetupCommand> AndroidCommands;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Editor Configuration")
+	TArray<ESetupCommand> EditorCommands;
+
+	UFUNCTION(BlueprintCallable)
+	void Run();
+
 	virtual void MixedRealitySetupCommandComplete(USMixedRealitySetupCommand* Command, bool Result) override;
+
+	void BuildCommandQueue();
+
+private:
+
+	TQueue<TObjectPtr<USMixedRealitySetupCommand>> Commands;
+
+	void RunNextSetupCommand();
+
+	void CompleteSetup();
 
 protected:
 	// Called when the game starts or when spawned
