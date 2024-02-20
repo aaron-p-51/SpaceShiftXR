@@ -243,3 +243,60 @@ void USClearSceneCommand::Execute()
 
 	CommandComplete(false);
 }
+
+
+//
+// Begin USLoadSceneFromDeviceCommand
+//
+USLoadSceneFromDeviceCommand* USLoadSceneFromDeviceCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer)
+{
+	auto Command = NewObject<USLoadSceneFromDeviceCommand>();
+	if (!Command->Initialize(Issuer))
+	{
+		UE_LOG(SMixedRealitySetup, Error, TEXT("Unable to properly Initialize USLoadSceneFromDeviceCommand"));
+	}
+
+	return Command;
+}
+
+
+void USLoadSceneFromDeviceCommand::Execute()
+{
+#if WITH_EDITOR
+	CommandComplete(false);
+	return;
+#elif PLATFORM_ANDROID
+	if (auto Subsystem = GetMRUKSubsystem())
+	{
+		Subsystem->OnSceneLoaded.AddUniqueDynamic(this, &USLoadSceneFromDeviceCommand::OnSceneLoaded);
+		Subsystem->LoadSceneFromDevice();
+	}
+	else
+	{
+		CommandComplete(false);
+	}
+#endif
+}
+
+
+void USLoadSceneFromDeviceCommand::OnSceneLoaded(bool Success)
+{
+	if (auto Subsystem = GetMRUKSubsystem())
+	{
+		Subsystem->OnSceneLoaded.RemoveDynamic(this, &USLoadSceneFromDeviceCommand::OnSceneLoaded);
+	}
+
+	CommandComplete(Success);
+}
+
+
+void USLoadSceneFromDeviceCommand::Cleanup()
+{
+	auto Subsystem = GetMRUKSubsystem();
+	if (Subsystem && Subsystem->OnSceneLoaded.IsBound())
+	{
+		Subsystem->OnSceneLoaded.RemoveDynamic(this, &USLoadSceneFromDeviceCommand::OnSceneLoaded);
+	}
+
+	Super::Cleanup();
+}

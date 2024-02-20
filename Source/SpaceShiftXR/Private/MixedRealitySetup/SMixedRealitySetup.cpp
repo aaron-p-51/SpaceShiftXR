@@ -31,17 +31,19 @@ void ASMixedRealitySetup::BuildCommandQueue()
 	{
 		if (SetupCommand == ESetupCommand::ESCRequestUseSceneData)
 		{
-			auto Command = USRequestUseSceneDataCommand::MakeCommand(this);
-			Commands.Enqueue(Command);
+			Commands.Enqueue(USRequestUseSceneDataCommand::MakeCommand(this));
 		}
 		else if (SetupCommand == ESetupCommand::ESCRunSceneCapture)
 		{
-			auto Command = USRunSceneCaptureCommand::MakeCommand(this);
-			Commands.Enqueue(Command);
+			Commands.Enqueue(USRunSceneCaptureCommand::MakeCommand(this));
 		}
 		else if (SetupCommand == ESetupCommand::ESCClearScene)
 		{
 			Commands.Enqueue(USClearSceneCommand::MakeCommand(this));
+		}
+		else if (SetupCommand == ESetupCommand::ESCLoadSceneFromDevice)
+		{
+			Commands.Enqueue(USLoadSceneFromDeviceCommand::MakeCommand(this));
 		}
 	}
 }

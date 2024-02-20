@@ -124,11 +124,12 @@ public:
 
 private:
 
-	/** Callback when Scene capture is complete */
+	/** Callback when scene capture process is complete */
 	UFUNCTION()
 	void OnMRUKSubsystemCaptureComplete(bool Success);
 
 };
+
 
 UCLASS()
 class SPACESHIFTXR_API USClearSceneCommand : public USMixedRealitySetupCommand
@@ -142,5 +143,29 @@ public:
 
 	/** Execute USClearSceneCommand */
 	virtual void Execute() override;
+};
+
+
+UCLASS()
+class SPACESHIFTXR_API USLoadSceneFromDeviceCommand : public USMixedRealitySetupCommand
+{
+	GENERATED_BODY()
+
+public:
+
+	/** Create a command of type USLoadSceneFromDeviceCommand */
+	static USLoadSceneFromDeviceCommand* MakeCommand(ISMixedRealityCommandIssuer* Issuer);
+
+	/** Execute USLoadSceneFromDeviceCommand */
+	virtual void Execute() override;
+
+	/** Remove bound delegates and delete command  */
+	virtual void Cleanup() override;
+
+private:
+
+	/** Callback when scene load is complete */
+	UFUNCTION()
+	void OnSceneLoaded(bool Success);
 };
 	
