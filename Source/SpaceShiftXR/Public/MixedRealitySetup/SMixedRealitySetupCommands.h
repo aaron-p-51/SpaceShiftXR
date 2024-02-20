@@ -202,4 +202,45 @@ private:
 	/** Preset room configuration to load */
 	FString* PresetRoomJSON = nullptr;
 };
+
+
+UCLASS()
+class SPACESHIFTXR_API USLoadGloblaMeshFromDeviceCommand : public USMixedRealitySetupCommand
+{
+	GENERATED_BODY()
+
+public:
+
+	/** Create a command of type USLoadGloblaMeshFromDeviceCommand */
+	static TObjectPtr<USLoadGloblaMeshFromDeviceCommand> MakeCommand(ISMixedRealityCommandIssuer* Issuer, TObjectPtr<UMaterial> Material);
+
+	/** Execute USLoadGloblaMeshFromDeviceCommand */
+	virtual void Execute() override;
+
+private:
+	
+	/** Material to apply to global scene mesh */
+	TObjectPtr<UMaterial> GloblaMeshMaterial;
+
+};
+
+
+UCLASS()
+class SPACESHIFTXR_API USSetGlobalMeshVisibleCommand : public USMixedRealitySetupCommand
+{
+	GENERATED_BODY()
+
+public:
+
+	/** Create a command of type USSetGlobalMeshVisibleCommand */
+	static TObjectPtr<USSetGlobalMeshVisibleCommand> MakeCommand(ISMixedRealityCommandIssuer* Issuer, bool Visible);
+
+	/** Execute USSetGlobalMeshVisibleCommand */
+	virtual void Execute() override;
+
+private:
+
+	/** Global Mesh Anchor visibility */
+	bool bEnableVisibility;
+};
 	

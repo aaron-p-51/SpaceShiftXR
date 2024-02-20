@@ -45,12 +45,25 @@ void ASMixedRealitySetup::BuildCommandQueue()
 		{
 			Commands.Enqueue(USLoadSceneFromDeviceCommand::MakeCommand(this));
 		}
+		else if (SetupCommand == ESetupCommand::ESCLoadGlobalMeshFromDevice)
+		{
+			Commands.Enqueue(USLoadGloblaMeshFromDeviceCommand::MakeCommand(this, GlobalMeshMaterial));
+		}
+		else if (SetupCommand == ESetupCommand::ESCSetGlobalMeshHidden)
+		{
+			Commands.Enqueue(USSetGlobalMeshVisibleCommand::MakeCommand(this, false));
+		}
+		else if (SetupCommand == ESetupCommand::ESCSetGlobalMeshVisible)
+		{
+			Commands.Enqueue(USSetGlobalMeshVisibleCommand::MakeCommand(this, true));
+		}
 #if WITH_EDITOR
 		else if (SetupCommand == ESetupCommand::ESCLoadPresetScene)
 		{
 			Commands.Enqueue(USLoadPresetSceneCommand::MakeCommand(this, &RoomConfigJSON, MRUKAnchorActorSpawner));
 		}
 #endif
+		
 	}
 }
 

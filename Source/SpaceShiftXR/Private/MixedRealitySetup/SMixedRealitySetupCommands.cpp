@@ -323,6 +323,12 @@ USLoadPresetSceneCommand* USLoadPresetSceneCommand::MakeCommand(ISMixedRealityCo
 
 void USLoadPresetSceneCommand::Execute()
 {
+	if (!PresetRoomJSON || !MRUKAnchorActorSpawner)
+	{
+		CommandComplete(false);
+		return;
+	}
+
 #if PLATFORM_ANDROID
 	CommandComplete(false);
 	return;
@@ -386,5 +392,79 @@ void USLoadPresetSceneCommand::Cleanup()
 }
 
 
+//
+// Begin USLoadGloblaMeshFromDeviceCommand
+//
+TObjectPtr<USLoadGloblaMeshFromDeviceCommand> USLoadGloblaMeshFromDeviceCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer, TObjectPtr<UMaterial> Material)
+{
+	auto Command = NewObject<USLoadGloblaMeshFromDeviceCommand>();
+	const bool InitializeResult = Command->Initialize(Issuer);
+	Command->GloblaMeshMaterial = Material;
+
+	if (!InitializeResult || !Command->GloblaMeshMaterial)
+	{
+		UE_LOG(SMixedRealitySetup, Error, TEXT("Unable to properly Initialize USLoadGloblaMeshFromDeviceCommand"));
+	}
+
+	return Command;
+}
+
+
+void USLoadGloblaMeshFromDeviceCommand::Execute()
+{
+	if (!GloblaMeshMaterial)
+	{
+		CommandComplete(false);
+		return;
+	}
+
+	bool Success = false;
+	if (auto Subsystem = GetMRUKSubsystem())
+	{
+		if (Subsystem->SceneLoadStatus == EMRUKInitStatus::Complete)
+		{
+			if (auto CurrentRoom = Subsystem->GetCurrentRoom())
+			{
+				Success = CurrentRoom->LoadGlobalMeshFromDevice(GloblaMeshMaterial);
+			}
+		}
+		else
+		{
+			UE_LOG(SMixedRealitySetup, Error, TEXT("USLoadGloblaMeshFromDeviceCommand can not run if MRUKSubsystem does not have scene loaded"));
+		}
+	}
+
+	CommandComplete(Success);
+}
+
+
+//
+// Begin USSetGlobalMeshVisibleCommand
+//
+TObjectPtr<USSetGlobalMeshVisibleCommand> USSetGlobalMeshVisibleCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer, bool Visible)
+{
+	auto Command = NewObject<USSetGlobalMeshVisibleCommand>();
+	Command->Initialize(Issuer);
+	Command->bEnableVisibility = Visible;
+
+	return Command;
+}
+
+
+void USSetGlobalMeshVisibleCommand::Execute()
+{
+	bool Success = false;
+
+	if (auto CurrentRoom = GetCurrentRoom())
+	{
+		if (CurrentRoom->GlobalMeshAnchor)
+		{
+			CurrentRoom->GlobalMeshAnchor->SetActorHiddenInGame(!bEnableVisibility);
+			Success = true;
+		}
+	}
+
+	CommandComplete(Success);
+}
 
 

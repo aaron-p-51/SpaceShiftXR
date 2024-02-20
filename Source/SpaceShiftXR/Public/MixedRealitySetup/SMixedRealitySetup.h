@@ -31,6 +31,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<AMRUKAnchorActorSpawner> MRUKAnchorActorSpawner;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<UMaterial> GlobalMeshMaterial;
+
 	UFUNCTION(BlueprintCallable)
 	void Run();
 
