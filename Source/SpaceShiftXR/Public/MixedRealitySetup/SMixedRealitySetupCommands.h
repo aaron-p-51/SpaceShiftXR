@@ -9,7 +9,7 @@
 class ISMixedRealityCommandIssuer;
 class UMRUKSubsystem;
 class AMRUKRoom;
-
+class AMRUKAnchorActorSpawner;
 
 /**
  * 
@@ -167,5 +167,39 @@ private:
 	/** Callback when scene load is complete */
 	UFUNCTION()
 	void OnSceneLoaded(bool Success);
+};
+
+
+UCLASS()
+class SPACESHIFTXR_API USLoadPresetSceneCommand : public USMixedRealitySetupCommand
+{
+	GENERATED_BODY()
+
+public:
+
+	/** Create a command of type USLoadPresetSceneCommand */
+	static USLoadPresetSceneCommand* MakeCommand(ISMixedRealityCommandIssuer* Issuer, FString* PresetRoom, TObjectPtr<AMRUKAnchorActorSpawner> Spawner);
+
+	/** Execute USLoadPresetSceneCommand */
+	virtual void Execute() override;
+
+	/** Remove bound delegates and delete command  */
+	virtual void Cleanup() override;
+
+private:
+
+	/** Callback when scene load is complete */
+	UFUNCTION()
+	void OnSceneLoaded(bool Success);
+
+	/** Callback when AMRUKAnchorActorSpawner has spawned actors into the scene */
+	UFUNCTION()
+	void OnMRUKAnchorActorsSpawned();
+
+	/** Pointer to the AMRUKAnchorActorSpawner in the scene */
+	TObjectPtr<AMRUKAnchorActorSpawner> MRUKAnchorActorSpawner = nullptr;
+
+	/** Preset room configuration to load */
+	FString* PresetRoomJSON = nullptr;
 };
 	

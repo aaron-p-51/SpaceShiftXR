@@ -8,7 +8,7 @@
 #include "SMixedRealitySetupTypes.h"
 #include "SMixedRealitySetup.generated.h"
 
-
+class AMRUKAnchorActorSpawner;
 
 UCLASS()
 class SPACESHIFTXR_API ASMixedRealitySetup : public AActor, public ISMixedRealityCommandIssuer
@@ -25,20 +25,47 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Editor Configuration")
 	TArray<ESetupCommand> EditorCommands;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Editor Configuration")
+	EPresetRoom PresetRoom;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<AMRUKAnchorActorSpawner> MRUKAnchorActorSpawner;
+
 	UFUNCTION(BlueprintCallable)
 	void Run();
 
 	virtual void MixedRealitySetupCommandComplete(USMixedRealitySetupCommand* Command, bool Result) override;
 
-	void BuildCommandQueue();
+
+
+	void BuildPresetRoomMap(TMap<EPresetRoom, FName>& PresetRoomMap) const;
+
+
+	UFUNCTION(BlueprintImplementableEvent, DisplayName = "FindRoomConfig")
+	void BP_FindRoomConfig(FName RoomName);
+
+	UFUNCTION(BlueprintCallable)
+	void SetPresetRoomConfig(FString RoomConfig);
+
+	ESetupState GetSetupState() const { return SetupState; }
 
 private:
 
 	TQueue<TObjectPtr<USMixedRealitySetupCommand>> Commands;
 
+	FString RoomConfigJSON;
+
 	void RunNextSetupCommand();
 
 	void CompleteSetup();
+
+	void BeginSetup();
+
+	ESetupState SetupState;
+
+	bool bSetupInProgress;
+
+	void BuildCommandQueue();
 
 protected:
 	// Called when the game starts or when spawned

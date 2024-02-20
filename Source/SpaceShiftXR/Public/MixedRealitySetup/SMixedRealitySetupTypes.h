@@ -81,7 +81,6 @@ enum class EPresetRoom : uint8
 	ESR_ExtraWide		UMETA(DisplayName = "ExtraWide"),
 	ESR_RecRoom			UMETA(DisplayName = "RecRoom"),
 	ESR_EmptySplit		UMETA(DisplayName = "EmptySplit"),
-	ESR_empty			UMETA(DisplayName = "empty"),
 	ESR_HardAngles		UMETA(DisplayName = "HardAngles"),
 	ESR_Triangular		UMETA(DisplayName = "Triangular"),
 	ESR_Cluttered		UMETA(DisplayName = "Cluttered"),

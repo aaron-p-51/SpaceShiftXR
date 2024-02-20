@@ -300,3 +300,91 @@ void USLoadSceneFromDeviceCommand::Cleanup()
 
 	Super::Cleanup();
 }
+
+
+//
+// BeginUSLoadPresetSceneCommand
+//
+USLoadPresetSceneCommand* USLoadPresetSceneCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer, FString* PresetRoom, TObjectPtr<AMRUKAnchorActorSpawner> Spawner)
+{
+	auto Command = NewObject<USLoadPresetSceneCommand>();
+	const bool InitializeResult = Command->Initialize(Issuer);
+	Command->PresetRoomJSON = PresetRoom;
+	Command->MRUKAnchorActorSpawner = Spawner;
+
+	if (!InitializeResult || !Command->PresetRoomJSON || !Command->MRUKAnchorActorSpawner)
+	{
+		UE_LOG(SMixedRealitySetup, Error, TEXT("Unable to properly Initialize USLoadPresetSceneCommand"));
+	}
+
+	return Command;
+}
+
+
+void USLoadPresetSceneCommand::Execute()
+{
+#if PLATFORM_ANDROID
+	CommandComplete(false);
+	return;
+#elif WITH_EDITOR
+	if (auto Subsystem = GetMRUKSubsystem())
+	{
+		Subsystem->OnSceneLoaded.AddUniqueDynamic(this, &USLoadPresetSceneCommand::OnSceneLoaded);
+		Subsystem->LoadSceneFromJsonString(*PresetRoomJSON);
+	}
+	else
+	{
+		CommandComplete(false);
+	}
+#endif
+}
+
+
+void USLoadPresetSceneCommand::OnSceneLoaded(bool Success)
+{
+	if (auto Subsystem = GetMRUKSubsystem())
+	{
+		Subsystem->OnSceneLoaded.RemoveDynamic(this, &USLoadPresetSceneCommand::OnSceneLoaded);
+	}
+
+	if (Success && MRUKAnchorActorSpawner)
+	{
+		MRUKAnchorActorSpawner->OnActorsSpawned.AddUniqueDynamic(this, &USLoadPresetSceneCommand::OnMRUKAnchorActorsSpawned);
+		MRUKAnchorActorSpawner->SpawnInterior();
+	}
+	else
+	{
+		CommandComplete(false);
+	}
+}
+
+
+void USLoadPresetSceneCommand::OnMRUKAnchorActorsSpawned()
+{
+	if (MRUKAnchorActorSpawner)
+	{
+		MRUKAnchorActorSpawner->OnActorsSpawned.RemoveDynamic(this, &USLoadPresetSceneCommand::OnMRUKAnchorActorsSpawned);
+	}
+
+	CommandComplete(true);
+}
+
+void USLoadPresetSceneCommand::Cleanup()
+{
+	auto Subsystem = GetMRUKSubsystem();
+	if (Subsystem && Subsystem->OnSceneLoaded.IsBound())
+	{
+		Subsystem->OnSceneLoaded.RemoveDynamic(this, &USLoadPresetSceneCommand::OnSceneLoaded);
+	}
+
+	if (MRUKAnchorActorSpawner && MRUKAnchorActorSpawner->OnActorsSpawned.IsBound())
+	{
+		MRUKAnchorActorSpawner->OnActorsSpawned.RemoveDynamic(this, &USLoadPresetSceneCommand::OnMRUKAnchorActorsSpawned);
+	}
+
+	Super::Cleanup();
+}
+
+
+
+
