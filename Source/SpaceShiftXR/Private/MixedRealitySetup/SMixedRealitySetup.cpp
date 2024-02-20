@@ -5,7 +5,6 @@
 
 #include "MixedRealitySetup/SMixedRealitySetupCommands.h"
 
-DEFINE_LOG_CATEGORY(SMixedRealitySetup)
 
 // Sets default values
 ASMixedRealitySetup::ASMixedRealitySetup()
@@ -33,14 +32,14 @@ void ASMixedRealitySetup::BuildCommandQueue()
 		if (SetupCommand == ESetupCommand::ESCRequestUseSceneData)
 		{
 			auto Command = USRequestUseSceneDataCommand::MakeCommand(this);
-			UE_LOG(SMixedRealitySetup, Log, TEXT("Add USRequestUseSceneDataCommand"));
+			Commands.Enqueue(Command);
+		}
+		else if (SetupCommand == ESetupCommand::ESCRunSceneCapture)
+		{
+			auto Command = USRunSceneCaptureCommand::MakeCommand(this);
 			Commands.Enqueue(Command);
 		}
 	}
-
-
-
-
 }
 
 void ASMixedRealitySetup::RunNextSetupCommand()
@@ -61,7 +60,6 @@ void ASMixedRealitySetup::RunNextSetupCommand()
 
 void ASMixedRealitySetup::MixedRealitySetupCommandComplete(USMixedRealitySetupCommand* Command, bool Result)
 {
-	UE_LOG(LogTemp, Warning, TEXT("MixedRealitySetupCommandComplete: 1"));
 	if (!Command)
 	{
 		UE_LOG(SMixedRealitySetup, Error, TEXT("Unknown Command Completed"));
@@ -78,7 +76,7 @@ void ASMixedRealitySetup::MixedRealitySetupCommandComplete(USMixedRealitySetupCo
 		//SetupState = ESetupState::ESS_Failed;
 	}
 
-	Command->ConditionalBeginDestroy();
+	Command->Cleanup();
 
 	if (!Commands.IsEmpty())
 	{

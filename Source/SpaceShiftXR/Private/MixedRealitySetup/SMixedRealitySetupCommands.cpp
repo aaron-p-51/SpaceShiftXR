@@ -3,8 +3,30 @@
 
 #include "MixedRealitySetup/SMixedRealitySetupCommands.h"
 #include "MixedRealitySetup/SMixedRealityCommandIssuer.h"
+#include "MixedRealitySetup/SMixedRealitySetupTypes.h"
 #include "AndroidPermissionFunctionLibrary.h"
 #include "AndroidPermissionCallbackProxy.h"
+#include "Kismet/GameplayStatics.h"
+#include "MRUtilityKitAnchorActorSpawner.h"
+#include "MRUtilityKitRoom.h"
+#include "MRUtilityKitSubsystem.h"
+
+
+//
+//	USMixedRealitySetupCommand
+//
+bool USMixedRealitySetupCommand::Initialize(ISMixedRealityCommandIssuer* Issuer)
+{
+	if (Issuer)
+	{
+		CommandIssuer = Issuer;
+		UObject* IssuerObject = Cast<UObject>(CommandIssuer);
+		WorldPtr = IssuerObject ? IssuerObject->GetWorld() : nullptr;
+	}
+
+	return CommandIssuer && WorldPtr;
+}
+
 
 void USMixedRealitySetupCommand::CommandComplete(bool Result)
 {
@@ -15,21 +37,64 @@ void USMixedRealitySetupCommand::CommandComplete(bool Result)
 }
 
 
+void USMixedRealitySetupCommand::Cleanup()
+{
+	if (IsValid(this))
+	{
+		ConditionalBeginDestroy();
+	}
+}
+
+
+UMRUKSubsystem* USMixedRealitySetupCommand::GetMRUKSubsystem() const
+{
+	if (WorldPtr)
+	{
+		if (auto GameInstance = WorldPtr->GetGameInstance())
+		{
+			return GameInstance->GetSubsystem<UMRUKSubsystem>();
+		}
+	}
+
+	return nullptr;
+}
+
+
+AMRUKRoom* USMixedRealitySetupCommand::GetCurrentRoom() const
+{
+	if (auto Subsystem = GetMRUKSubsystem())
+	{
+		return Subsystem->GetCurrentRoom();
+	}
+
+	return nullptr;
+}
+
+
 void USMyTestCommand::Execute()
 {
-	UE_LOG(LogTemp, Warning, TEXT("USMyTestCommand::Execute"));
+	UE_LOG(SMixedRealitySetup, Warning, TEXT("USMyTestCommand::Execute"));
 
 	CommandComplete(true);
 	
 }
-
-
 
 //
 //	Begin USRequestUseSceneDataCommand
 //
 
 const FString USRequestUseSceneDataCommand::SCENE_PERMISSION = FString("com.oculus.permission.USE_SCENE");
+
+USRequestUseSceneDataCommand* USRequestUseSceneDataCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer)
+{
+	USRequestUseSceneDataCommand* Command = NewObject<USRequestUseSceneDataCommand>();
+	if (!Command->Initialize(Issuer))
+	{
+		UE_LOG(SMixedRealitySetup, Error, TEXT("Unable to properly Initialize USRequestUseSceneDataCommand"));
+	}
+	return Command;
+}
+
 
 void USRequestUseSceneDataCommand::Execute()
 {
@@ -46,6 +111,7 @@ void USRequestUseSceneDataCommand::Execute()
 		CommandComplete(true);
 	}
 }
+
 
 bool USRequestUseSceneDataCommand::HadPermissionForSceneData() const
 {
@@ -80,7 +146,8 @@ void USRequestUseSceneDataCommand::OnPermissionRequestComplete(const TArray<FStr
 	CommandComplete(Success);
 }
 
-void USRequestUseSceneDataCommand::BeginDestroy()
+
+void USRequestUseSceneDataCommand::Cleanup()
 {
 	// Ensure all bindings are removed from OnPermissionsGrantedDelegate
 	if (AndroidPermissionCallbackProxy && PermissionGrantedDelegateHandle.IsValid())
@@ -89,7 +156,64 @@ void USRequestUseSceneDataCommand::BeginDestroy()
 		PermissionGrantedDelegateHandle.Reset();
 	}
 
-	Super::BeginDestroy();
+	Super::Cleanup();
+}
+
+
+//
+// Begin USRunSceneCaptureCommand
+//
+
+USRunSceneCaptureCommand* USRunSceneCaptureCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer)
+{
+	USRunSceneCaptureCommand* Command = NewObject<USRunSceneCaptureCommand>();
+	if (!Command->Initialize(Issuer))
+	{
+		UE_LOG(SMixedRealitySetup, Error, TEXT("Unable to properly Initialize USRunSceneCaptureCommand"));
+	}
+	return Command;
+}
+
+
+void USRunSceneCaptureCommand::Execute()
+{
+#if WITH_EDITOR
+	CommandComplete(true);
+	return;
+#elif PLATFORM_ANDROID
+	if (auto Subsystem = GetMRUKSubsystem())
+	{
+		Subsystem->OnCaptureComplete.AddUniqueDynamic(this, &USRunSceneCaptureCommand::OnMRUKSubsystemCaptureComplete);
+		Subsystem->LaunchSceneCapture();
+	}
+	else
+	{
+		CommandComplete(false);
+	}
+#endif
+}
+
+
+void USRunSceneCaptureCommand::OnMRUKSubsystemCaptureComplete(bool Success)
+{
+	if (auto Subsystem = GetMRUKSubsystem())
+	{
+		Subsystem->OnCaptureComplete.RemoveDynamic(this, &USRunSceneCaptureCommand::OnMRUKSubsystemCaptureComplete);
+	}
+
+	CommandComplete(Success);
+}
+
+
+void USRunSceneCaptureCommand::Cleanup()
+{
+	auto Subsystem = GetMRUKSubsystem();
+	if (Subsystem && Subsystem->OnCaptureComplete.IsBound())
+	{
+		Subsystem->OnCaptureComplete.RemoveDynamic(this, &USRunSceneCaptureCommand::OnMRUKSubsystemCaptureComplete);
+	}
+
+	Super::Cleanup();
 }
 
 

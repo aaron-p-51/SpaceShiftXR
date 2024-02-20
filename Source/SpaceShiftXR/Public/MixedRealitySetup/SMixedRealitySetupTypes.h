@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "SMixedRealitySetupTypes.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(SMixedRealitySetup, Log, All);
+
 /**
  * States for mixed reality setup
  */

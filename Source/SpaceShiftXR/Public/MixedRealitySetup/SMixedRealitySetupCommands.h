@@ -7,6 +7,9 @@
 #include "SMixedRealitySetupCommands.generated.h"
 
 class ISMixedRealityCommandIssuer;
+class UMRUKSubsystem;
+class AMRUKRoom;
+
 
 /**
  * 
@@ -21,11 +24,31 @@ public:
 	/** Execute command */
 	virtual void Execute() PURE_VIRTUAL(USMixedRealitySetupCommand::Execute);
 
+	/** Unbind and remaining delegates and delete command UObject */
+	virtual void Cleanup();
+
+	/** Get the Mixed Reality Utility Kit GameInstance subsystem */
+	UMRUKSubsystem* GetMRUKSubsystem() const;
+
+	/** Get Mixed Reality Utility Kit Room Actor */
+	AMRUKRoom* GetCurrentRoom() const;
+
 protected:
 
-	ISMixedRealityCommandIssuer* CommandIssuer;
+	/** Set member variables for command */
+	bool Initialize(ISMixedRealityCommandIssuer* Issuer);
 
+	/** Object to created command. This object will be informed when command is complete via ISMixedRealityCommandIssuer interface */
+	ISMixedRealityCommandIssuer* CommandIssuer = nullptr;
+
+	/** World context pointer */
+	TObjectPtr<UWorld> WorldPtr = nullptr;
+
+	/** Notifies CommandIssuer command is complete with success result*/
 	void CommandComplete(bool Result);
+	
+
+
 	
 };
 
@@ -36,10 +59,10 @@ class SPACESHIFTXR_API USMyTestCommand : public USMixedRealitySetupCommand
 
 public:
 
-	static USMyTestCommand* MakeCommand(ISMixedRealityCommandIssuer* Issuer)
+	static USMyTestCommand* MakeCommand(ISMixedRealityCommandIssuer* Issuer, TObjectPtr<UWorld> WorldContextPtr)
 	{
 		USMyTestCommand* Command = NewObject<USMyTestCommand>();
-		Command->CommandIssuer = Issuer;
+		Command->Initialize(Issuer);
 		return Command;
 	}
 
@@ -55,15 +78,18 @@ class SPACESHIFTXR_API USRequestUseSceneDataCommand : public USMixedRealitySetup
 public:
 
 	/** Create a command of type USRequestUseSceneDataCommand */
-	static USRequestUseSceneDataCommand* MakeCommand(ISMixedRealityCommandIssuer* Issuer)
-	{
-		USRequestUseSceneDataCommand* Command = NewObject<USRequestUseSceneDataCommand>();
-		Command->CommandIssuer = Issuer;
-		return Command;
-	}
+	static USRequestUseSceneDataCommand* MakeCommand(ISMixedRealityCommandIssuer* Issuer);
+
+	/** Scene permission request parameter */
+	static const FString SCENE_PERMISSION;
 
 	/** Execute USRequestUseSceneDataCommand command */
 	virtual void Execute() override;
+
+	/** Remove bound delegates and delete command  */
+	virtual void Cleanup() override;
+
+private:
 
 	/** Check if app has permission to use scene data */
 	bool HadPermissionForSceneData() const;
@@ -77,11 +103,30 @@ public:
 
 	/** Delegaet for Permission Request binding */
 	class FDelegateHandle PermissionGrantedDelegateHandle;
+};
 
-	/** UObject override for object destruction */
-	virtual void BeginDestroy() override;
 
-	/** Scene permission request parameter */
-	static const FString SCENE_PERMISSION;
+UCLASS()
+class SPACESHIFTXR_API USRunSceneCaptureCommand : public USMixedRealitySetupCommand
+{
+	GENERATED_BODY()
+
+public:
+
+	/** Create a command of type USRunSceneCaptureCommand */
+	static USRunSceneCaptureCommand* MakeCommand(ISMixedRealityCommandIssuer* Issuer);
+
+	/** Execute USRunSceneCaptureCommand command */
+	virtual void Execute() override;
+
+	/** Remove bound delegates and delete command  */
+	virtual void Cleanup() override;
+
+private:
+
+	/** Callback when Scene capture is complete */
+	UFUNCTION()
+	void OnMRUKSubsystemCaptureComplete(bool Success);
 
 };
+	

@@ -10,7 +10,17 @@ public class SpaceShiftXR : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "AndroidPermission" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] {  });
+		//PrivateDependencyModuleNames.AddRange(new string[] {  });
+
+		PrivateDependencyModuleNames.AddRange(new string[] {
+				"HeadMountedDisplay",
+				"UMG",
+				"MRUtilityKit",
+				"OculusXRHMD",
+				"OculusXRAnchors",
+				"OculusXRScene",
+				"ProceduralMeshComponent",
+				});
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

@@ -8,7 +8,7 @@
 #include "SMixedRealitySetupTypes.h"
 #include "SMixedRealitySetup.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(SMixedRealitySetup, Log, All);
+
 
 UCLASS()
 class SPACESHIFTXR_API ASMixedRealitySetup : public AActor, public ISMixedRealityCommandIssuer
