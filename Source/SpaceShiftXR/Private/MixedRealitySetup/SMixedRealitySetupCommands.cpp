@@ -20,7 +20,7 @@ bool USMixedRealitySetupCommand::Initialize(ISMixedRealityCommandIssuer* Issuer)
 	if (Issuer)
 	{
 		CommandIssuer = Issuer;
-		UObject* IssuerObject = Cast<UObject>(CommandIssuer);
+		auto IssuerObject = Cast<UObject>(CommandIssuer);
 		WorldPtr = IssuerObject ? IssuerObject->GetWorld() : nullptr;
 	}
 
@@ -87,7 +87,7 @@ const FString USRequestUseSceneDataCommand::SCENE_PERMISSION = FString("com.ocul
 
 USRequestUseSceneDataCommand* USRequestUseSceneDataCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer)
 {
-	USRequestUseSceneDataCommand* Command = NewObject<USRequestUseSceneDataCommand>();
+	auto Command = NewObject<USRequestUseSceneDataCommand>();
 	if (!Command->Initialize(Issuer))
 	{
 		UE_LOG(SMixedRealitySetup, Error, TEXT("Unable to properly Initialize USRequestUseSceneDataCommand"));
@@ -166,7 +166,7 @@ void USRequestUseSceneDataCommand::Cleanup()
 
 USRunSceneCaptureCommand* USRunSceneCaptureCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer)
 {
-	USRunSceneCaptureCommand* Command = NewObject<USRunSceneCaptureCommand>();
+	auto Command = NewObject<USRunSceneCaptureCommand>();
 	if (!Command->Initialize(Issuer))
 	{
 		UE_LOG(SMixedRealitySetup, Error, TEXT("Unable to properly Initialize USRunSceneCaptureCommand"));
@@ -217,3 +217,29 @@ void USRunSceneCaptureCommand::Cleanup()
 }
 
 
+//
+// Begin USClearSceneCommand
+//
+USClearSceneCommand* USClearSceneCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer)
+{
+	auto Command = NewObject<USClearSceneCommand>();
+	if (!Command->Initialize(Issuer))
+	{
+		UE_LOG(SMixedRealitySetup, Error, TEXT("Unable to properly Initialize USClearSceneCommand"));
+	}
+
+	return Command;
+}
+
+
+void USClearSceneCommand::Execute()
+{
+	if (auto Subsystem = GetMRUKSubsystem())
+	{
+		Subsystem->ClearScene();
+		CommandComplete(true);
+		return;
+	}
+
+	CommandComplete(false);
+}

@@ -129,4 +129,18 @@ private:
 	void OnMRUKSubsystemCaptureComplete(bool Success);
 
 };
+
+UCLASS()
+class SPACESHIFTXR_API USClearSceneCommand : public USMixedRealitySetupCommand
+{
+	GENERATED_BODY()
+
+public:
+
+	/** Create a command of type USClearSceneCommand */
+	static USClearSceneCommand* MakeCommand(ISMixedRealityCommandIssuer* Issuer);
+
+	/** Execute USClearSceneCommand */
+	virtual void Execute() override;
+};
 	

@@ -39,6 +39,10 @@ void ASMixedRealitySetup::BuildCommandQueue()
 			auto Command = USRunSceneCaptureCommand::MakeCommand(this);
 			Commands.Enqueue(Command);
 		}
+		else if (SetupCommand == ESetupCommand::ESCClearScene)
+		{
+			Commands.Enqueue(USClearSceneCommand::MakeCommand(this));
+		}
 	}
 }
 
