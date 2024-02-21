@@ -10,7 +10,7 @@
 ASMixedRealitySetup::ASMixedRealitySetup()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 }
 
@@ -51,16 +51,28 @@ void ASMixedRealitySetup::BuildCommandQueue()
 		}
 		else if (SetupCommand == ESetupCommand::ESCSetGlobalMeshHidden)
 		{
-			Commands.Enqueue(USSetGlobalMeshVisibleCommand::MakeCommand(this, false));
+			Commands.Enqueue(USSetGlobalMeshHiddenCommand::MakeCommand(this));
 		}
 		else if (SetupCommand == ESetupCommand::ESCSetGlobalMeshVisible)
 		{
-			Commands.Enqueue(USSetGlobalMeshVisibleCommand::MakeCommand(this, true));
+			Commands.Enqueue(USSetGlobalMeshVisibleCommand::MakeCommand(this));
+		}
+		else if (SetupCommand == ESetupCommand::ESCEnableGlobalMeshCollision)
+		{
+			Commands.Enqueue(USEnableGlobalCollisionCommand::MakeCommand(this));
+		}
+		else if (SetupCommand == ESetupCommand::ESCDisableGlobalMeshCollision)
+		{
+			Commands.Enqueue(USDisableGlobalCollisionCommand::MakeCommand(this));
 		}
 #if WITH_EDITOR
 		else if (SetupCommand == ESetupCommand::ESCLoadPresetScene)
 		{
 			Commands.Enqueue(USLoadPresetSceneCommand::MakeCommand(this, &RoomConfigJSON, MRUKAnchorActorSpawner));
+		}
+		else if (SetupCommand == ESetupCommand::ESCApplyTextureToWalls)
+		{
+			Commands.Enqueue(USApplyTextureToWallsCommand::MakeCommand(this, PresetRoomMaterials));
 		}
 #endif
 		
@@ -123,6 +135,7 @@ void ASMixedRealitySetup::CompleteSetup()
 	bSetupInProgress = false;
 
 	UE_LOG(SMixedRealitySetup, Log, TEXT("Setup Complete Status: %s"), *UEnum::GetValueAsString(SetupState));
+	OnSetupComplete.Broadcast(SetupState == ESetupState::ESS_Complete);
 }
 
 void ASMixedRealitySetup::BeginSetup()
@@ -177,15 +190,6 @@ void ASMixedRealitySetup::Run()
 }
 
 
-
-
-// Called every frame
-void ASMixedRealitySetup::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
-
 void ASMixedRealitySetup::BuildPresetRoomMap(TMap<EPresetRoom, FName>& PresetRoomMap) const
 {
 	PresetRoomMap.Add(EPresetRoom::EPR_Bedroom00, FName("Bedroom00"));
@@ -212,18 +216,17 @@ void ASMixedRealitySetup::BuildPresetRoomMap(TMap<EPresetRoom, FName>& PresetRoo
 	PresetRoomMap.Add(EPresetRoom::EPR_Office03, FName("Office03"));
 	PresetRoomMap.Add(EPresetRoom::EPR_Office04, FName("Office04"));
 	PresetRoomMap.Add(EPresetRoom::EPR_Office05, FName("Office05"));
-	PresetRoomMap.Add(EPresetRoom::EPR_Office06, FName("Office06"));
 	PresetRoomMap.Add(EPresetRoom::EPR_Office07, FName("Office07"));
 	PresetRoomMap.Add(EPresetRoom::EPR_Office08, FName("Office08"));
 	PresetRoomMap.Add(EPresetRoom::EPR_Office09, FName("Office09"));
 
-	PresetRoomMap.Add(EPresetRoom::ESR_TrippingHazard, FName("TrippingHazard"));
-	PresetRoomMap.Add(EPresetRoom::ESR_ExtraWide, FName("ExtraWide"));
-	PresetRoomMap.Add(EPresetRoom::ESR_RecRoom, FName("RecRoom"));
-	PresetRoomMap.Add(EPresetRoom::ESR_EmptySplit, FName("EmptySplit"));
-	PresetRoomMap.Add(EPresetRoom::ESR_HardAngles,FName("HardAngles"));
-	PresetRoomMap.Add(EPresetRoom::ESR_Triangular,	FName("Triangular"));
-	PresetRoomMap.Add(EPresetRoom::ESR_Cluttered,FName("Cluttered"));
+	PresetRoomMap.Add(EPresetRoom::ESR_TrippingHazard, FName("OtherRoom00_TrippingHazard"));
+	PresetRoomMap.Add(EPresetRoom::ESR_ExtraWide, FName("OtherRoom01_ExtraWide"));
+	PresetRoomMap.Add(EPresetRoom::ESR_RecRoom, FName("OtherRoom02_RecRoom"));
+	PresetRoomMap.Add(EPresetRoom::ESR_EmptySplit, FName("OtherRoom03_EmptySplit"));
+	PresetRoomMap.Add(EPresetRoom::ESR_HardAngles,FName("OtherRoom05_HardAngles"));
+	PresetRoomMap.Add(EPresetRoom::ESR_Triangular,	FName("OtherRoom06_Triangular"));
+	PresetRoomMap.Add(EPresetRoom::ESR_Cluttered,FName("OtherRoom07_Cluttered"));
 }
 
 void ASMixedRealitySetup::SetPresetRoomConfig(FString RoomConfig)

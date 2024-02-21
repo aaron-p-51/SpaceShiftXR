@@ -72,7 +72,6 @@ enum class EPresetRoom : uint8
 	EPR_Office03		UMETA(DisplayName = "Office03"),
 	EPR_Office04		UMETA(DisplayName = "Office04"),
 	EPR_Office05		UMETA(DisplayName = "Office05"),
-	EPR_Office06		UMETA(DisplayName = "Office06"),
 	EPR_Office07		UMETA(DisplayName = "Office07"),
 	EPR_Office08		UMETA(DisplayName = "Office08"),
 	EPR_Office09		UMETA(DisplayName = "Office09"),
@@ -86,4 +85,36 @@ enum class EPresetRoom : uint8
 	ESR_Cluttered		UMETA(DisplayName = "Cluttered"),
 
 	ESR_MAX				UMETA(DisplayName = "DEFAULT_MAX")
+};
+
+
+USTRUCT(BlueprintType)
+struct SPACESHIFTXR_API FPresetRoomMaterials
+{
+	GENERATED_BODY()
+
+public:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<UMaterial> Floor;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<UMaterial> Ceiling;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<UMaterial> Walls;
+
+	FPresetRoomMaterials()
+		:
+		Floor(nullptr),
+		Ceiling(nullptr),
+		Walls(nullptr)
+	{}
+
+	FPresetRoomMaterials(TObjectPtr<UMaterial> FloorMaterial, TObjectPtr<UMaterial> CeilingMaterial, TObjectPtr<UMaterial> WallsMaterial)
+		:
+		Floor(FloorMaterial),
+		Ceiling(CeilingMaterial),
+		Walls(WallsMaterial)
+	{}
 };

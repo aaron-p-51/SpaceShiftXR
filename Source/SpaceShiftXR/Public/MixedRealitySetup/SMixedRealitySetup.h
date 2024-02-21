@@ -8,6 +8,8 @@
 #include "SMixedRealitySetupTypes.h"
 #include "SMixedRealitySetup.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSetupCompleteDelegate, bool, Success);
+
 class AMRUKAnchorActorSpawner;
 
 UCLASS()
@@ -16,6 +18,10 @@ class SPACESHIFTXR_API ASMixedRealitySetup : public AActor, public ISMixedRealit
 	GENERATED_BODY()
 	
 public:	
+
+	UPROPERTY(BlueprintAssignable)
+	FSetupCompleteDelegate OnSetupComplete;
+
 	// Sets default values for this actor's properties
 	ASMixedRealitySetup();
 
@@ -27,6 +33,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Editor Configuration")
 	EPresetRoom PresetRoom;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Editor Configuration")
+	FPresetRoomMaterials PresetRoomMaterials;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<AMRUKAnchorActorSpawner> MRUKAnchorActorSpawner;
@@ -74,8 +83,6 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+
 
 };

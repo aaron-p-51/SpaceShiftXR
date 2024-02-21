@@ -4,12 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
+#include "MixedRealitySetup/SMixedRealitySetupTypes.h"
 #include "SMixedRealitySetupCommands.generated.h"
 
 class ISMixedRealityCommandIssuer;
 class UMRUKSubsystem;
 class AMRUKRoom;
 class AMRUKAnchorActorSpawner;
+
 
 /**
  * 
@@ -46,11 +48,8 @@ protected:
 
 	/** Notifies CommandIssuer command is complete with success result*/
 	void CommandComplete(bool Result);
-	
-
-
-	
 };
+
 
 UCLASS()
 class SPACESHIFTXR_API USMyTestCommand : public USMixedRealitySetupCommand
@@ -169,7 +168,7 @@ private:
 	void OnSceneLoaded(bool Success);
 };
 
-
+#if WITH_EDITOR
 UCLASS()
 class SPACESHIFTXR_API USLoadPresetSceneCommand : public USMixedRealitySetupCommand
 {
@@ -202,6 +201,7 @@ private:
 	/** Preset room configuration to load */
 	FString* PresetRoomJSON = nullptr;
 };
+#endif
 
 
 UCLASS()
@@ -233,14 +233,77 @@ class SPACESHIFTXR_API USSetGlobalMeshVisibleCommand : public USMixedRealitySetu
 public:
 
 	/** Create a command of type USSetGlobalMeshVisibleCommand */
-	static TObjectPtr<USSetGlobalMeshVisibleCommand> MakeCommand(ISMixedRealityCommandIssuer* Issuer, bool Visible);
+	static TObjectPtr<USSetGlobalMeshVisibleCommand> MakeCommand(ISMixedRealityCommandIssuer* Issuer);
 
 	/** Execute USSetGlobalMeshVisibleCommand */
+	virtual void Execute() override;
+};
+
+
+UCLASS()
+class SPACESHIFTXR_API USSetGlobalMeshHiddenCommand : public USMixedRealitySetupCommand
+{
+	GENERATED_BODY()
+
+public:
+
+	/** Create a command of type USSetGlobalMeshVisibleCommand */
+	static TObjectPtr<USSetGlobalMeshHiddenCommand> MakeCommand(ISMixedRealityCommandIssuer* Issuer);
+
+	/** Execute USSetGlobalMeshHiddenCommand */
+	virtual void Execute() override;
+};
+
+
+UCLASS()
+class SPACESHIFTXR_API USEnableGlobalCollisionCommand : public USMixedRealitySetupCommand
+{
+	GENERATED_BODY()
+
+public:
+
+	/** Create a command of type USEnableGlobalCollisionCommand */
+	static TObjectPtr<USEnableGlobalCollisionCommand> MakeCommand(ISMixedRealityCommandIssuer* Issuer);
+
+	/** Execute USEnableGlobalCollisionCommand */
+	virtual void Execute() override;
+};
+
+
+UCLASS()
+class SPACESHIFTXR_API USDisableGlobalCollisionCommand : public USMixedRealitySetupCommand
+{
+	GENERATED_BODY()
+
+public:
+
+	/** Create a command of type USEnableGlobalCollisionCommand */
+	static TObjectPtr<USDisableGlobalCollisionCommand> MakeCommand(ISMixedRealityCommandIssuer* Issuer);
+
+	/** Execute USEnableGlobalCollisionCommand */
+	virtual void Execute() override;
+};
+
+
+#if WITH_EDITOR
+
+UCLASS()
+class SPACESHIFTXR_API USApplyTextureToWallsCommand : public USMixedRealitySetupCommand
+{
+	GENERATED_BODY()
+
+public:
+	
+	/** Create a command of type USApplyTextureToWallsCommand */
+	static TObjectPtr<USApplyTextureToWallsCommand> MakeCommand(ISMixedRealityCommandIssuer* Issuer, FPresetRoomMaterials Materials);
+
+	/** Execute USApplyTextureToWallsCommand */
 	virtual void Execute() override;
 
 private:
 
-	/** Global Mesh Anchor visibility */
-	bool bEnableVisibility;
+	/** Materials to apply to preset room */
+	FPresetRoomMaterials PresetRoomMaterials;
 };
-	
+
+#endif

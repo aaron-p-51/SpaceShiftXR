@@ -3,7 +3,6 @@
 
 #include "MixedRealitySetup/SMixedRealitySetupCommands.h"
 #include "MixedRealitySetup/SMixedRealityCommandIssuer.h"
-#include "MixedRealitySetup/SMixedRealitySetupTypes.h"
 #include "AndroidPermissionFunctionLibrary.h"
 #include "AndroidPermissionCallbackProxy.h"
 #include "Kismet/GameplayStatics.h"
@@ -305,6 +304,7 @@ void USLoadSceneFromDeviceCommand::Cleanup()
 //
 // BeginUSLoadPresetSceneCommand
 //
+#if WITH_EDITOR
 USLoadPresetSceneCommand* USLoadPresetSceneCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer, FString* PresetRoom, TObjectPtr<AMRUKAnchorActorSpawner> Spawner)
 {
 	auto Command = NewObject<USLoadPresetSceneCommand>();
@@ -390,7 +390,7 @@ void USLoadPresetSceneCommand::Cleanup()
 
 	Super::Cleanup();
 }
-
+#endif
 
 //
 // Begin USLoadGloblaMeshFromDeviceCommand
@@ -441,12 +441,13 @@ void USLoadGloblaMeshFromDeviceCommand::Execute()
 //
 // Begin USSetGlobalMeshVisibleCommand
 //
-TObjectPtr<USSetGlobalMeshVisibleCommand> USSetGlobalMeshVisibleCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer, bool Visible)
+TObjectPtr<USSetGlobalMeshVisibleCommand> USSetGlobalMeshVisibleCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer)
 {
 	auto Command = NewObject<USSetGlobalMeshVisibleCommand>();
-	Command->Initialize(Issuer);
-	Command->bEnableVisibility = Visible;
-
+	if (!Command->Initialize(Issuer))
+	{
+		UE_LOG(SMixedRealitySetup, Error, TEXT("Unable to properly Initialize USSetGlobalMeshVisibleCommand"));
+	}
 	return Command;
 }
 
@@ -459,7 +460,7 @@ void USSetGlobalMeshVisibleCommand::Execute()
 	{
 		if (CurrentRoom->GlobalMeshAnchor)
 		{
-			CurrentRoom->GlobalMeshAnchor->SetActorHiddenInGame(!bEnableVisibility);
+			CurrentRoom->GlobalMeshAnchor->SetActorHiddenInGame(false);
 			Success = true;
 		}
 	}
@@ -468,3 +469,158 @@ void USSetGlobalMeshVisibleCommand::Execute()
 }
 
 
+//
+// Begin USSetGlobalMeshHiddenCommand
+//
+TObjectPtr<USSetGlobalMeshHiddenCommand> USSetGlobalMeshHiddenCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer)
+{
+	auto Command = NewObject<USSetGlobalMeshHiddenCommand>();
+	if (!Command->Initialize(Issuer))
+	{
+		UE_LOG(SMixedRealitySetup, Error, TEXT("Unable to properly Initialize USSetGlobalMeshHiddenCommand"));
+	}
+	return Command;
+}
+
+
+void USSetGlobalMeshHiddenCommand::Execute()
+{
+	bool Success = false;
+
+	if (auto CurrentRoom = GetCurrentRoom())
+	{
+		if (CurrentRoom->GlobalMeshAnchor)
+		{
+			CurrentRoom->GlobalMeshAnchor->SetActorHiddenInGame(true);
+			Success = true;
+		}
+	}
+
+	CommandComplete(Success);
+}
+
+
+//
+// Begin USEnableGlobalCollisionCommand
+//
+TObjectPtr<USEnableGlobalCollisionCommand> USEnableGlobalCollisionCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer)
+{
+	auto Command = NewObject<USEnableGlobalCollisionCommand>();
+	if (!Command->Initialize(Issuer))
+	{
+		UE_LOG(SMixedRealitySetup, Error, TEXT("Unable to properly Initialize USEnableGlobalCollisionCommand"));
+	}
+	return Command;
+}
+
+
+void USEnableGlobalCollisionCommand::Execute()
+{
+	bool Success = false;
+
+	if (auto CurrentRoom = GetCurrentRoom())
+	{
+		if (CurrentRoom->GlobalMeshAnchor)
+		{
+			CurrentRoom->GlobalMeshAnchor->SetActorEnableCollision(true);
+			Success = true;
+		}
+	}
+
+	CommandComplete(Success);
+}
+
+
+//
+// Begin USDisableGlobalCollisionCommand
+//
+TObjectPtr<USDisableGlobalCollisionCommand> USDisableGlobalCollisionCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer)
+{
+	auto Command = NewObject<USDisableGlobalCollisionCommand>();
+	if (!Command->Initialize(Issuer))
+	{
+		UE_LOG(SMixedRealitySetup, Error, TEXT("Unable to properly Initialize USDisableGlobalCollisionCommand"));
+	}
+	return Command;
+}
+
+
+void USDisableGlobalCollisionCommand::Execute()
+{
+	bool Success = false;
+
+	if (auto CurrentRoom = GetCurrentRoom())
+	{
+		if (CurrentRoom->GlobalMeshAnchor)
+		{
+			CurrentRoom->GlobalMeshAnchor->SetActorEnableCollision(false);
+			Success = true;
+		}
+	}
+
+	CommandComplete(Success);
+}
+
+
+// 
+// Begin USApplyTextureToWallsCommand
+//
+#if WITH_EDITOR
+TObjectPtr<USApplyTextureToWallsCommand> USApplyTextureToWallsCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer, FPresetRoomMaterials Materials)
+{
+	auto Command = NewObject<USApplyTextureToWallsCommand>();
+	if (!Command->Initialize(Issuer))
+	{
+		UE_LOG(SMixedRealitySetup, Error, TEXT("Unable to properly Initialize USApplyTextureToWallsCommand"));
+	}
+	Command->PresetRoomMaterials = Materials;
+
+	return Command;
+}
+
+
+void USApplyTextureToWallsCommand::Execute()
+{
+	if (auto Subsystem = GetMRUKSubsystem())
+	{
+		for (auto Room : Subsystem->Rooms)
+		{
+			// Set Floor Material
+			if (PresetRoomMaterials.Floor && Room && Room->FloorAnchor && Room->FloorAnchor->ProceduralMeshComponent)
+			{
+				auto FloorMeshComp = Room->FloorAnchor->ProceduralMeshComponent;
+				auto FloorDynamicMaterialInst = UMaterialInstanceDynamic::Create(PresetRoomMaterials.Floor, FloorMeshComp);
+				FloorMeshComp->SetMaterial(0, FloorDynamicMaterialInst);
+			}
+
+			// Set Ceiling Material
+			if (PresetRoomMaterials.Ceiling && Room && Room->CeilingAnchor && Room->CeilingAnchor->ProceduralMeshComponent)
+			{
+				auto CeilingMeshComp = Room->CeilingAnchor->ProceduralMeshComponent;
+				auto CeilingDynamicMaterialInst = UMaterialInstanceDynamic::Create(PresetRoomMaterials.Ceiling, CeilingMeshComp);
+				CeilingMeshComp->SetMaterial(0, CeilingDynamicMaterialInst);
+			}
+
+			if (PresetRoomMaterials.Walls)
+			{
+				for (auto Wall : Room->WallAnchors)
+				{
+					// Set Wall Material
+					if (Wall && Wall->ProceduralMeshComponent)
+					{
+						auto WallMeshComp = Wall->ProceduralMeshComponent;
+						auto WallDynamicMaterialInst = UMaterialInstanceDynamic::Create(PresetRoomMaterials.Walls, WallMeshComp);
+						WallMeshComp->SetMaterial(0, WallDynamicMaterialInst);
+					}
+				}
+			}
+		}
+
+		CommandComplete(true);
+		return;
+	}
+
+	CommandComplete(false);
+}
+
+#endif
