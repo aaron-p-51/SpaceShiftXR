@@ -168,7 +168,7 @@ private:
 	void OnSceneLoaded(bool Success);
 };
 
-#if WITH_EDITOR
+
 UCLASS()
 class SPACESHIFTXR_API USLoadPresetSceneCommand : public USMixedRealitySetupCommand
 {
@@ -201,7 +201,7 @@ private:
 	/** Preset room configuration to load */
 	FString* PresetRoomJSON = nullptr;
 };
-#endif
+
 
 
 UCLASS()
@@ -285,7 +285,7 @@ public:
 };
 
 
-#if WITH_EDITOR
+
 
 UCLASS()
 class SPACESHIFTXR_API USApplyTextureToWallsCommand : public USMixedRealitySetupCommand
@@ -306,4 +306,4 @@ private:
 	FPresetRoomMaterials PresetRoomMaterials;
 };
 
-#endif
+

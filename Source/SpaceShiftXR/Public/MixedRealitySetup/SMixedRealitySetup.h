@@ -59,6 +59,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetPresetRoomConfig(FString RoomConfig);
 
+	UFUNCTION(BlueprintCallable)
 	ESetupState GetSetupState() const { return SetupState; }
 
 private:
