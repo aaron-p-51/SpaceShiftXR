@@ -20,22 +20,37 @@ void USSpaceshipMovementComponent::TickComponent(float DeltaTime, ELevelTick Tic
 	ForceAppliedThisFrame += GetForceFromThrust(Thrust);
 	ForceAppliedThisFrame += GetDragForce();
 
-	TorqueAppliedThisFrame = FVector::ZeroVector;
-	TorqueAppliedThisFrame += GetTorqueFromYokeInput(Yoke);
-	TorqueAppliedThisFrame += GetTorqueResistance();
 
-	AngularVelocity = ComputeAngularVelocity(AngularVelocity, DeltaTime);
-	//RotateVelocityToOwnerForwardVector(DeltaTime);
+	AngularVelocity.X = FMath::FInterpTo(AngularVelocity.X, -Yoke.Y * PitchSpeed, DeltaTime, Damping);
+	AngularVelocity.Y = FMath::FInterpTo(AngularVelocity.Y, Yoke.X * YawSpeed, DeltaTime, Damping);
+	AngularVelocity.Z = 0.f;
 
-	FQuat RotationDelta = ComputeRotationDelta(AngularVelocity, DeltaTime);
-	RotationThisFrame = ComputeNewRotation(RotationDelta);
-	RotationThisFrame = ClampRotationLimits(RotationThisFrame);
+	AngularVelocity = AngularVelocity.GetClampedToMaxSize(MaxAngularVelocity);
+	FRotator NewRotation = UpdatedComponent->GetComponentRotation();
+
+	FVector RotationDelta = AngularVelocity * DeltaTime;
+	NewRotation.Pitch += RotationDelta.X;
+	NewRotation.Yaw += RotationDelta.Y;
+
+	NewRotation.Pitch = FMath::Clamp(NewRotation.Pitch, -MaxPitchAngle, MaxPitchAngle);
+	
+
+	//TorqueAppliedThisFrame = FVector::ZeroVector;
+	//TorqueAppliedThisFrame += GetTorqueFromYokeInput(Yoke);
+	//TorqueAppliedThisFrame += GetTorqueResistance();
+
+	//AngularVelocity = ComputeAngularVelocity(AngularVelocity, DeltaTime);
+	////RotateVelocityToOwnerForwardVector(DeltaTime);
+
+	//FQuat RotationDelta = ComputeRotationDelta(AngularVelocity, DeltaTime);
+	//RotationThisFrame = ComputeNewRotation(RotationDelta);
+	//RotationThisFrame = ClampRotationLimits(RotationThisFrame);
 
 	const FVector OldVelocity = Velocity;
 	const FVector MoveDelta = ComputeMoveDelta(OldVelocity, DeltaTime);
 
 	FHitResult Hit;
-	SafeMoveUpdatedComponent(MoveDelta, RotationThisFrame, false, Hit);
+	SafeMoveUpdatedComponent(MoveDelta, NewRotation, false, Hit);
 
 	if (Velocity == OldVelocity)
 	{

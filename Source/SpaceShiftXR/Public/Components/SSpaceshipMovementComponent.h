@@ -24,6 +24,18 @@ public:
 
 
 public:
+	
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	float PitchSpeed = 100.f;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	float YawSpeed = 100.f;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	float Damping = 0.4f;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	float MaxAngularVelocity = 10.f;
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere)
 	float Mass = 10.f;
