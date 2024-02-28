@@ -16,6 +16,8 @@ class SPACESHIFTXR_API USAsteroidPrimaryDataAsset : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 
+public:
+
 	/** Static Mesh of asteroid */
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UStaticMesh> Mesh;
