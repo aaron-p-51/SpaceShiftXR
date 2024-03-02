@@ -4,9 +4,10 @@
 #include "Gameplay/Asteroid/SAsteroidSpawner.h"
 
 #include "Kismet/GameplayStatics.h"
-#include "Gameplay/Asteroid/SAsteroid.h"
 #include "Gameplay/Asteroid/SAsteroidPrimaryDataAsset.h"
+#include "Gameplay/Asteroid/SAsteroid.h"
 #include "MRUtilityKitSubsystem.h"
+#include "SPoolSubsystem.h"
 #include "MixedRealitySetup/SMixedRealitySetup.h"
 
 // Sets default values
@@ -18,11 +19,12 @@ ASAsteroidSpawner::ASAsteroidSpawner()
 }
 
 
-
 // Called when the game starts or when spawned
 void ASAsteroidSpawner::BeginPlay()
 {
 	Super::BeginPlay();
+
+	CreateAsteroidObjectPool();
 
 	if (bStartSpawnOnStart)
 	{
@@ -31,57 +33,12 @@ void ASAsteroidSpawner::BeginPlay()
 }
 
 
-int32 ASAsteroidSpawner::GetSpawnLocations(TArray<FVector>& Locations) const
+void ASAsteroidSpawner::CreateAsteroidObjectPool()
 {
-	int32 FoundLocations = 0;
-	if (auto CurrentRoom = GetCurrentRoom())
+	if (auto Subsystem = GetPoolSubsystem())
 	{
-		for (int32 i = 0; i < MaxSpawnAttempts; ++i)
-		{
-			FVector PossiblePosition;
-			if (CurrentRoom->GenerateRandomPositionInRoom(PossiblePosition, SpawnSeperationDistance, true))
-			{
-				if (!PositionOverlap(PossiblePosition, Locations, SpawnSeperationDistance))
-				{
-					Locations.Add(PossiblePosition);
-					FoundLocations++;
-
-					if (FoundLocations >= MaxAsteroids)
-					{
-						break;
-					}
-				}
-			}
-		}
+		Subsystem->CreatePool(AsteroidClass, InitialAsteroidPoolSize);
 	}
-
-	return FoundLocations;
-}
-
-
-bool ASAsteroidSpawner::PositionOverlap(const FVector& Position, const TArray<FVector>& OtherPositions, float Distance) const
-{
-	const float DistanceSqr = Distance * Distance;
-	for (const auto OtherPosition : OtherPositions)
-	{
-		if (FVector::DistSquared(OtherPosition, Position) < DistanceSqr)
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-
-UMRUKSubsystem* ASAsteroidSpawner::GetMRUKSubsystem() const
-{
-	if (auto GameInstance = GetGameInstance())
-	{
-		return GameInstance->GetSubsystem<UMRUKSubsystem>();
-	}
-
-	return nullptr;
 }
 
 
@@ -117,27 +74,68 @@ void ASAsteroidSpawner::OnMixedRealitySetupComplete(bool Result)
 void ASAsteroidSpawner::SpawnAsteroidsInternal()
 {
 	TArray<FVector> SpawnLocations;
-	const int32 ValidSpawnLocations = GetSpawnLocations(SpawnLocations);
+	GetSpawnLocations(SpawnLocations);
 
-	UE_LOG(LogTemp, Warning, TEXT("SpawnAsteroidsInternal, %d valid positions"), ValidSpawnLocations);
-
-
-	for (int32 i = 0; i < ValidSpawnLocations; ++i)
+	if (auto Subsystem = GetPoolSubsystem())
 	{
-		const FRotator Rotation(FMath::RandRange(-180.f, 180.f), FMath::RandRange(-180.f, 180.f), FMath::RandRange(-180.f, 180.f));
-		const float ScaleFactor = FMath::RandRange(AsteroidDataAsset->MinScale, AsteroidDataAsset->MaxScale);
-		const FVector Scale(ScaleFactor, ScaleFactor, ScaleFactor);
-
-		const FTransform SpawnTransform(Rotation, SpawnLocations[i], Scale);
-		auto Asteroid = GetWorld()->SpawnActorDeferred<ASAsteroid>(AsteroidClass, SpawnTransform, this, nullptr, ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn);
-		if (Asteroid)
+		for (const auto& Location : SpawnLocations)
 		{
-			Asteroid->DataAsset = AsteroidDataAsset;
-			Asteroid->InitializeAsFragment(false);
-			Asteroid->FinishSpawning(SpawnTransform);
-			Asteroids.Add(Asteroid);
+			const FRotator RandomRotation(FMath::RandRange(-180.f, 180.f), FMath::RandRange(-180.f, 180.f), FMath::RandRange(-180.f, 180.f));
+			if (ASAsteroid* Asteroid = Subsystem->SpawnFromPool<ASAsteroid>(AsteroidClass, Location, RandomRotation))
+			{
+				Asteroid->InitializeAsteroid(AsteroidDataAsset);
+			}
 		}
 	}
+}
+
+
+void ASAsteroidSpawner::GetSpawnLocations(TArray<FVector>& Locations) const
+{
+	if (auto CurrentRoom = GetCurrentRoom())
+	{
+		for (int32 i = 0; i < MaxSpawnAttempts; ++i)
+		{
+			FVector PossiblePosition;
+			if (CurrentRoom->GenerateRandomPositionInRoom(PossiblePosition, SpawnSeperationDistance, true))
+			{
+				if (!PositionOverlap(PossiblePosition, Locations, SpawnSeperationDistance))
+				{
+					Locations.Add(PossiblePosition);
+					if (Locations.Num() >= MaxAsteroids)
+					{
+						return;
+					}
+				}
+			}
+		}
+	}
+}
+
+
+bool ASAsteroidSpawner::PositionOverlap(const FVector& Position, const TArray<FVector>& OtherPositions, float Distance) const
+{
+	const float DistanceSqr = Distance * Distance;
+	for (const auto& OtherPosition : OtherPositions)
+	{
+		if (FVector::DistSquared(OtherPosition, Position) < DistanceSqr)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+
+UMRUKSubsystem* ASAsteroidSpawner::GetMRUKSubsystem() const
+{
+	if (auto GameInstance = GetGameInstance())
+	{
+		return GameInstance->GetSubsystem<UMRUKSubsystem>();
+	}
+
+	return nullptr;
 }
 
 
@@ -152,12 +150,12 @@ AMRUKRoom* ASAsteroidSpawner::GetCurrentRoom() const
 }
 
 
-// Called every frame
-void ASAsteroidSpawner::Tick(float DeltaTime)
+USPoolSubsystem* ASAsteroidSpawner::GetPoolSubsystem() const
 {
-	Super::Tick(DeltaTime);
+	if (const UWorld* World = GetWorld())
+	{
+		return World->GetSubsystem<USPoolSubsystem>();
+	}
 
+	return nullptr;
 }
-
-
-

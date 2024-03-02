@@ -56,6 +56,6 @@ public:
 
 	/** Data assets for fragment asteroids */
 	UPROPERTY(EditAnywhere)
-	TArray<TObjectPtr<USAsteroidPrimaryDataAsset>> AsteroidFragments;
+	TObjectPtr<USAsteroidPrimaryDataAsset> AsteroidFragments;
 	
 };

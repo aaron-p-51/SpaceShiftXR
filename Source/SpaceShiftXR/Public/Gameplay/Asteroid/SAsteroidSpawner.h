@@ -8,9 +8,11 @@
 
 class USAsteroidPrimaryDataAsset;
 class ASAsteroid;
+class ASAsteroidFragment;
 class UMRUKSubsystem;
 class AMRUKRoom;
 class ASMixedRealitySetup;
+class USPoolSubsystem;
 
 UCLASS()
 class SPACESHIFTXR_API ASAsteroidSpawner : public AActor
@@ -21,13 +23,18 @@ public:
 	// Sets default values for this actor's properties
 	ASAsteroidSpawner();
 
-	int32 GetSpawnLocations(TArray<FVector>& Locations) const;
+	void GetSpawnLocations(TArray<FVector>& Locations) const;
 	bool PositionOverlap(const FVector& Position, const TArray<FVector>& OtherPositions, float Distance) const;
 
 	UMRUKSubsystem* GetMRUKSubsystem() const;
 	AMRUKRoom* GetCurrentRoom() const;
 
 	void SpawnAsteroids();
+	
+
+	USPoolSubsystem* GetPoolSubsystem() const;
+
+	void CreateAsteroidObjectPool();
 
 
 protected:
@@ -45,35 +52,30 @@ protected:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<ASAsteroid> AsteroidClass;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditAnywhere)
 	int32 MaxSpawnAttempts = 500;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditAnywhere)
 	int32 MaxAsteroids;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditAnywhere)
 	int32 SpawnSeperationDistance;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditAnywhere)
 	bool bStartSpawnOnStart;
 
+	UPROPERTY(EditAnywhere)
+	int32 InitialAsteroidPoolSize = 60;
 	
 	TArray<TObjectPtr<ASAsteroid>> Asteroids;
 
-	TArray<TObjectPtr<ASAsteroid>> AsteroidFragmentPool;
 
-
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
 
 private:
 
 	void SpawnAsteroidsInternal();
 
+
 	UFUNCTION()
 	void OnMixedRealitySetupComplete(bool Result);
-
-	
-
 };
