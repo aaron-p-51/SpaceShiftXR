@@ -30,6 +30,10 @@ public:
 	UPROPERTY(EditAnywhere)
 	float CollisionRadius;
 
+	/** Default Mass of the asteroid for movement simulation (will be adjusted based on scale) */
+	UPROPERTY(EditAnywhere)
+	float DefaultMass;
+
 	/** Minimim world scale of the asteroid actor */
 	UPROPERTY(EditAnywhere)
 	float MinScale;

@@ -7,6 +7,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Gameplay/Asteroid/SAsteroidPrimaryDataAsset.h"
 #include "Gameplay/Asteroid/SAsteroidSpawner.h"
+#include "Gameplay/Asteroid/SAsteroidMovementComponent.h"
 #include "SPoolSubsystem.h"
 
 
@@ -27,6 +28,8 @@ ASAsteroid::ASAsteroid()
 	MeshComp->SetupAttachment(GetRootComponent());
 	SphereComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SphereComp->SetGenerateOverlapEvents(false);
+
+	MovementComp = CreateDefaultSubobject<USAsteroidMovementComponent>(TEXT("AsteroidMovementComp"));
 }
 
 
@@ -34,6 +37,14 @@ ASAsteroid::ASAsteroid()
 void ASAsteroid::BeginPlay()
 {
 	Super::BeginPlay();
+
+	Mass = DefaultMass;
+
+	if (DataAsset)
+	{
+		InitializeAsteroid(DataAsset);
+	}
+	
 
 }
 
@@ -59,6 +70,12 @@ void ASAsteroid::InitializeAsteroid(TObjectPtr<USAsteroidPrimaryDataAsset> Aster
 
 	const float Size = FMath::RandRange(DataAsset->MinScale, DataAsset->MaxScale);
 	SetActorScale3D(FVector(Size, Size, Size));
+
+	const float CenterScale = (DataAsset->MinScale + DataAsset->MaxScale) / 2.f;
+	Mass = DataAsset->DefaultMass * Size / CenterScale;
+
+	UE_LOG(LogTemp, Warning, TEXT("Size: %f, CenterScale: %f, DefaultMass: %f, Mass: %f"), Size, CenterScale, DataAsset->DefaultMass, Mass);
+
 
 	if (MeshComp)
 	{
@@ -222,4 +239,6 @@ USPoolSubsystem* ASAsteroid::GetPoolSubsystem() const
 
 	return nullptr;
 }
+
+
 
