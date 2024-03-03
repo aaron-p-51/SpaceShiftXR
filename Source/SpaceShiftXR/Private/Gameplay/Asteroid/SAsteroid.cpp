@@ -7,6 +7,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Gameplay/Asteroid/SAsteroidPrimaryDataAsset.h"
 #include "Gameplay/Asteroid/SAsteroidSpawner.h"
+#include "Gameplay/Asteroid/SAsteroidMovementComponent.h"
 #include "SPoolSubsystem.h"
 
 
@@ -27,6 +28,8 @@ ASAsteroid::ASAsteroid()
 	MeshComp->SetupAttachment(GetRootComponent());
 	SphereComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SphereComp->SetGenerateOverlapEvents(false);
+
+	AstroidMovementComp = CreateDefaultSubobject<USAsteroidMovementComponent>(TEXT("MovementComp"));
 }
 
 
@@ -83,6 +86,16 @@ void ASAsteroid::InitializeAsteroid(TObjectPtr<USAsteroidPrimaryDataAsset> Aster
 	{
 		GenerateFragmentSpawnLocations();
 	}
+
+	AstroidMovementComp->bEnableMovement = true;
+	AstroidMovementComp->Velocity = GetRandomPointInUnitSphere() * 10.f;
+
+	/*MovementComp->InitialSpeed = 10.f;
+	MovementComp->MaxSpeed = 500.f;
+	MovementComp->bSimulationEnabled = true;
+	MovementComp->Velocity = GetRandomPointInUnitSphere() * 10.f;
+	MovementComp->AddForce(GetRandomPointInUnitSphere() * 100.f);*/
+	bInSpace = true;
 }
 
 

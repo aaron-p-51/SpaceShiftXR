@@ -12,6 +12,7 @@ class USphereComponent;
 class USAsteroidPrimaryDataAsset;
 class ASAsteroidSpawner;
 class USPoolSubsystem;
+class USAsteroidMovementComponent;
 
 
 UCLASS()
@@ -49,7 +50,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> MeshComp;
 
-
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Components")
+	TObjectPtr<USAsteroidMovementComponent> AstroidMovementComp;
 	
 	
 
@@ -65,6 +67,9 @@ protected:
 	bool bHasFragments;
 
 	float Health;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bInSpace = false;
 
 private:
 
