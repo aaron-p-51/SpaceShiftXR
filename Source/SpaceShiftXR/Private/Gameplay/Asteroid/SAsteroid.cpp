@@ -7,7 +7,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Gameplay/Asteroid/SAsteroidPrimaryDataAsset.h"
 #include "Gameplay/Asteroid/SAsteroidSpawner.h"
-#include "Gameplay/Asteroid/SAsteroidMovementComponent.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 #include "SPoolSubsystem.h"
 
 
@@ -29,7 +29,7 @@ ASAsteroid::ASAsteroid()
 	SphereComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SphereComp->SetGenerateOverlapEvents(false);
 
-	MovementComp = CreateDefaultSubobject<USAsteroidMovementComponent>(TEXT("AsteroidMovementComp"));
+	MovementComp = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("Movement"));
 }
 
 
@@ -45,6 +45,12 @@ void ASAsteroid::BeginPlay()
 		InitializeAsteroid(DataAsset);
 	}
 	
+	if (MovementComp)
+	{
+		MovementComp->Velocity = FVector::ZeroVector;
+		MovementComp->UpdateComponentVelocity();
+		MovementComp->bSimulationEnabled = false;
+	}
 
 }
 
@@ -100,6 +106,11 @@ void ASAsteroid::InitializeAsteroid(TObjectPtr<USAsteroidPrimaryDataAsset> Aster
 	{
 		GenerateFragmentSpawnLocations();
 	}
+
+	MovementComp->bSimulationEnabled = true;
+	MovementComp->Velocity = GetRandomPointInUnitSphere() * 10.f;
+	MovementComp->UpdateComponentVelocity();
+	MovementComp->AddForce(GetRandomPointInUnitSphere() * FMath::FRandRange(MinInitialForceMagnitude, MaxInitialForceMagnitude));
 }
 
 
@@ -194,6 +205,8 @@ void ASAsteroid::AsteroidHit(AActor* OtherActor)
 
 void ASAsteroid::AsteroidDestroyed()
 {
+	MovementComp->bSimulationEnabled = true;
+
 	UE_LOG(LogTemp, Warning, TEXT("AsteroidDestroyed"));
 	if (MeshComp)
 	{

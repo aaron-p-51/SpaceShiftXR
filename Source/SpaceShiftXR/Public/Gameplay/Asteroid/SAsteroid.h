@@ -12,7 +12,7 @@ class USphereComponent;
 class USAsteroidPrimaryDataAsset;
 class ASAsteroidSpawner;
 class USPoolSubsystem;
-class USAsteroidMovementComponent;
+class UProjectileMovementComponent;
 
 UCLASS()
 class SPACESHIFTXR_API ASAsteroid : public AActor, public ISPoolable
@@ -23,7 +23,13 @@ public:
 	// Sets default values for this actor's properties
 	ASAsteroid();
 
-	friend class USAsteroidMovementComponent;
+	
+
+	UPROPERTY(EditAnywhere)
+	float MinInitialForceMagnitude;
+
+	UPROPERTY(EditAnywhere)
+	float MaxInitialForceMagnitude;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Configuration")
 	TObjectPtr<USAsteroidPrimaryDataAsset> DataAsset;
@@ -57,7 +63,7 @@ protected:
 	TObjectPtr<UStaticMeshComponent> MeshComp;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Components")
-	TObjectPtr<USAsteroidMovementComponent> MovementComp;
+	TObjectPtr<UProjectileMovementComponent> MovementComp;
 
 	
 	

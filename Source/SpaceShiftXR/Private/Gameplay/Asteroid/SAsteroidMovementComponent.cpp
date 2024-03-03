@@ -31,29 +31,31 @@ void USAsteroidMovementComponent::BeginPlay()
 
 FVector USAsteroidMovementComponent::ComputeBounceResult(const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta)
 {
-	auto OtherAsteroid = Cast<ASAsteroid>(Hit.GetActor());
-	if (OtherAsteroid)
-	{
-		const FVector OtherAsteroidVelocity = OtherAsteroid->MovementComp->Velocity;
-		const FVector RelativeVelocity = Velocity - OtherAsteroidVelocity;
-		const float OtherMass = OtherAsteroid->Mass;
+	return Super::ComputeBounceResult(Hit, TimeSlice, MoveDelta);
 
-		auto AstroidOwner = Cast<ASAsteroid>(GetOwner());
-		const FVector FinalVelocity = (RelativeVelocity * (AstroidOwner->Mass - OtherMass) + 2.f * OtherMass * OtherAsteroidVelocity) / (AstroidOwner->Mass + OtherAsteroid->Mass);
-		
-		FVector OtherAsteroidFinalVelocity =  (2.f * AstroidOwner->Mass * Velocity - (AstroidOwner->Mass - OtherMass) * OtherAsteroidVelocity) / (AstroidOwner->Mass + OtherAsteroid->Mass);
+	//auto OtherAsteroid = Cast<ASAsteroid>(Hit.GetActor());
+	//if (OtherAsteroid)
+	//{
+	//	const FVector OtherAsteroidVelocity = OtherAsteroid->MovementComp->Velocity;
+	//	const FVector RelativeVelocity = Velocity - OtherAsteroidVelocity;
+	//	const float OtherMass = OtherAsteroid->Mass;
 
-		/*OtherAsteroid->MovementComp->Velocity = OtherAsteroidVelocity;
-		OtherAsteroid->MovementComp->UpdateComponentVelocity();*/
+	//	auto AstroidOwner = Cast<ASAsteroid>(GetOwner());
+	//	const FVector FinalVelocity = (RelativeVelocity * (AstroidOwner->Mass - OtherMass) + 2.f * OtherMass * OtherAsteroidVelocity) / (AstroidOwner->Mass + OtherAsteroid->Mass);
+	//	
+	//	FVector OtherAsteroidFinalVelocity =  (2.f * AstroidOwner->Mass * Velocity - (AstroidOwner->Mass - OtherMass) * OtherAsteroidVelocity) / (AstroidOwner->Mass + OtherAsteroid->Mass);
 
-		return FinalVelocity;
+	//	/*OtherAsteroid->MovementComp->Velocity = OtherAsteroidVelocity;
+	//	OtherAsteroid->MovementComp->UpdateComponentVelocity();*/
 
-	}
-	else
-	{
+	//	return FinalVelocity;
 
-		return Super::ComputeBounceResult(Hit, TimeSlice, MoveDelta);
-	}
+	//}
+	//else
+	//{
+
+	//	
+	//}
 
 	
 
@@ -77,11 +79,11 @@ void USAsteroidMovementComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	// Get force to make velocity to to 0
-	if (Velocity.SquaredLength() > 0.1f)
-	{
-		FVector Drag = 0.5f * -Velocity.GetSafeNormal() * /*Velocity.SizeSquared() * */ DragCoefficient;
-		AddForce(Drag);
-	}
+	//if (Velocity.SquaredLength() > 0.1f)
+	//{
+	//	FVector Drag = 0.5f * -Velocity.GetSafeNormal() * /*Velocity.SizeSquared() * */ DragCoefficient;
+	//	AddForce(Drag);
+	//}
 	//else
 	//{
 	//	UE_LOG(LogTemp, Warning, TEXT("Velocity lower"));
