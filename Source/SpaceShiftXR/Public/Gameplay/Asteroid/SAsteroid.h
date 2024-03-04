@@ -24,7 +24,7 @@ public:
 	// Sets default values for this actor's properties
 	ASAsteroid();
 
-	UPROPERTY(EditDefaultsOnly, Category = "Configuration")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Configuration")
 	TObjectPtr<USAsteroidPrimaryDataAsset> DataAsset;
 
 	void InitializeAsteroid(TObjectPtr<USAsteroidPrimaryDataAsset> AsteroidConfig);
@@ -43,6 +43,10 @@ public:
 	USPoolSubsystem* GetPoolSubsystem() const;
 
 protected:
+
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 
 	UPROPERTY(EditDefaultsOnly, Category = "Components")
 	TObjectPtr<USphereComponent> SphereComp;

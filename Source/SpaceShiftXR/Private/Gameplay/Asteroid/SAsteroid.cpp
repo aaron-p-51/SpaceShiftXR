@@ -33,10 +33,24 @@ ASAsteroid::ASAsteroid()
 }
 
 
+
+
+
+
 // Called when the game starts or when spawned
 void ASAsteroid::BeginPlay()
 {
 	Super::BeginPlay();
+
+#if WITH_EDITOR
+	if (DataAsset)
+	{
+		InitializeAsteroid(DataAsset);
+	}
+
+	const float Size = (DataAsset->MinScale + DataAsset->MaxScale) / 2.f;
+	SetActorScale3D(FVector(Size, Size, Size));
+#endif
 
 }
 
@@ -73,9 +87,9 @@ void ASAsteroid::InitializeAsteroid(TObjectPtr<USAsteroidPrimaryDataAsset> Aster
 	if (SphereComp)
 	{
 		SphereComp->SetSphereRadius(DataAsset->CollisionRadius);
-		SphereComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
+		//SphereComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
 		SphereComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-		SphereComp->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
+		//SphereComp->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
 	}
 
 	Health = DataAsset->Health;
@@ -87,7 +101,7 @@ void ASAsteroid::InitializeAsteroid(TObjectPtr<USAsteroidPrimaryDataAsset> Aster
 		GenerateFragmentSpawnLocations();
 	}
 
-	AstroidMovementComp->bEnableMovement = true;
+	AstroidMovementComp->SetMovementEnabled(true);
 	AstroidMovementComp->Velocity = GetRandomPointInUnitSphere() * 10.f;
 
 	/*MovementComp->InitialSpeed = 10.f;
@@ -235,4 +249,33 @@ USPoolSubsystem* ASAsteroid::GetPoolSubsystem() const
 
 	return nullptr;
 }
+
+#if WITH_EDITOR
+void ASAsteroid::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+
+	
+	if (PropertyChangedEvent.Property != nullptr && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(ASAsteroid, DataAsset))
+	{
+		if (DataAsset)
+		{
+			if (MeshComp)
+			{
+				MeshComp->SetStaticMesh(DataAsset->Mesh);
+				MeshComp->SetRelativeTransform(DataAsset->MeshLocalTransform);
+				MeshComp->SetVisibility(true, true);
+			}
+
+			if (SphereComp)
+			{
+				SphereComp->SetSphereRadius(DataAsset->CollisionRadius);
+			}
+
+			const float Size = (DataAsset->MinScale + DataAsset->MaxScale) / 2.f;
+			SetActorScale3D(FVector(Size, Size, Size));
+		}
+	}
+}
+#endif
 

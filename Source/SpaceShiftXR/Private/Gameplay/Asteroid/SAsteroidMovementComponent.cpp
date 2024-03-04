@@ -2,7 +2,8 @@
 
 
 #include "Gameplay/Asteroid/SAsteroidMovementComponent.h"
-
+#include "Kismet/GameplayStatics.h"
+#include "Gameplay/Asteroid/SAsteroidCollisionSolver.h"
 
 USAsteroidMovementComponent::USAsteroidMovementComponent()
 {
@@ -13,98 +14,123 @@ USAsteroidMovementComponent::USAsteroidMovementComponent()
 	MaxSimulationIterations = 4;
 }
 
+void USAsteroidMovementComponent::BeginPlay()
+{
+	//if (auto FoundActor = UGameplayStatics::GetActorOfClass(this, ASAsteroidCollisionSolver::StaticClass()))
+	//{
+	//	AsteroidCollisionSolver = Cast<ASAsteroidCollisionSolver>(FoundActor);
+	//}
+
+	//if (AsteroidCollisionSolver)
+	//{
+	//	UE_LOG(LogTemp, Warning, TEXT("Found Collision Solver"));
+	//}
+}
+
+USAsteroidCollisionSolver* USAsteroidMovementComponent::GetAsteroidCollisionSolver() const
+{
+	if (const UWorld* World = GetWorld())
+	{
+		return World->GetSubsystem<USAsteroidCollisionSolver>();
+	}
+	return nullptr;
+}
+
+
 void USAsteroidMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (!IsValid(UpdatedComponent) || !bEnableMovement)
-	{
-		return;
-	}
+	////return;
 
-	const float MinTickTime = 1e-6f;
-	float RemainingTime = DeltaTime;
-	int32 NumImpacts = 0;
-	int32 NumBounces = 0;
-	int32 LoopCount = 0;
-	int32 Iterations = 0;
-	FHitResult Hit(1.f);
-	while (bEnableMovement && (RemainingTime >= MinTickTime) && IsValid(UpdatedComponent) && (Iterations < MaxSimulationIterations))
-	{
+	//if (!IsValid(UpdatedComponent) || !bEnableMovement)
+	//{
+	//	return;
+	//}
 
-		LoopCount++;
-		Iterations++;
+	//const float MinTickTime = 1e-6f;
+	//float RemainingTime = DeltaTime;
+	//int32 NumImpacts = 0;
+	//int32 NumBounces = 0;
+	//int32 LoopCount = 0;
+	//int32 Iterations = 0;
+	//FHitResult Hit(1.f);
+	//while (bEnableMovement && (RemainingTime >= MinTickTime) && IsValid(UpdatedComponent) && (Iterations < MaxSimulationIterations))
+	//{
 
-		const float InitialTimeRemaining = RemainingTime;
-		const float TimeTick = RemainingTime;
-		RemainingTime -= TimeTick;
+	//	LoopCount++;
+	//	Iterations++;
 
-		Hit.Time = 1.f;
-		const FVector OldVelocity = Velocity;
-		const FVector MoveDelta = ComputeMoveDelta(OldVelocity, TimeTick);
+	//	const float InitialTimeRemaining = RemainingTime;
+	//	const float TimeTick = RemainingTime;
+	//	RemainingTime -= TimeTick;
 
-		// Should bounce
-		SafeMoveUpdatedComponent(MoveDelta, UpdatedComponent->GetComponentRotation(), true, Hit);
+	//	Hit.Time = 1.f;
+	//	const FVector OldVelocity = Velocity;
+	//	const FVector MoveDelta = ComputeMoveDelta(OldVelocity, TimeTick);
 
-		if (!Hit.bBlockingHit)
-		{
-			PreviousHitTime = 1.f;
-			bIsSliding = false;
+	//	// Should bounce
+	//	SafeMoveUpdatedComponent(MoveDelta, UpdatedComponent->GetComponentRotation(), true, Hit);
 
-			if (Velocity == OldVelocity)
-			{
-				Velocity = ComputeVelocity(Velocity, TimeTick);
-			}
-		}
-		else
-		{
-			// Only calculate new velocity if events didn't change it during the movement update.
-			if (Velocity == OldVelocity)
-			{
-				// re-calculate end velocity for partial time
-				Velocity = (Hit.Time > UE_KINDA_SMALL_NUMBER) ? ComputeVelocity(OldVelocity, TimeTick * Hit.Time) : OldVelocity;
-			}
+	//	if (!Hit.bBlockingHit)
+	//	{
+	//		PreviousHitTime = 1.f;
+	//		bIsSliding = false;
 
-			NumImpacts++;
-			float SubTickTimeRemaining = TimeTick * (1.f - Hit.Time);
-			const EHandleBlockingHitResult HandleBlockingHitResult = HandleBlockingHit(Hit, TimeTick, MoveDelta, SubTickTimeRemaining);
-			if (HandleBlockingHitResult == EHandleBlockingHitResult::Abort)
-			{
-				break;
-			}
-			else if (HandleBlockingHitResult == EHandleBlockingHitResult::Deflect)
-			{
-				NumBounces++;
-				HandleDeflection(Hit, OldVelocity, NumBounces, SubTickTimeRemaining);
-				PreviousHitTime = Hit.Time;
-				PreviousHitNormal = ConstrainNormalToPlane(Hit.Normal);
-			}
-			else
-			{
-				checkNoEntry();
-			}
+	//		if (Velocity == OldVelocity)
+	//		{
+	//			Velocity = ComputeVelocity(Velocity, TimeTick);
+	//		}
+	//	}
+	//	else
+	//	{
+	//		// Only calculate new velocity if events didn't change it during the movement update.
+	//		if (Velocity == OldVelocity)
+	//		{
+	//			// re-calculate end velocity for partial time
+	//			Velocity = (Hit.Time > UE_KINDA_SMALL_NUMBER) ? ComputeVelocity(OldVelocity, TimeTick * Hit.Time) : OldVelocity;
+	//		}
 
-			if (SubTickTimeRemaining >= MinTickTime)
-			{
-				RemainingTime += SubTickTimeRemaining;
+	//		NumImpacts++;
+	//		float SubTickTimeRemaining = TimeTick * (1.f - Hit.Time);
+	//		const EHandleBlockingHitResult HandleBlockingHitResult = HandleBlockingHit(Hit, TimeTick, MoveDelta, SubTickTimeRemaining);
+	//		if (HandleBlockingHitResult == EHandleBlockingHitResult::Abort)
+	//		{
+	//			break;
+	//		}
+	//		else if (HandleBlockingHitResult == EHandleBlockingHitResult::Deflect)
+	//		{
+	//			NumBounces++;
+	//			HandleDeflection(Hit, OldVelocity, NumBounces, SubTickTimeRemaining);
+	//			PreviousHitTime = Hit.Time;
+	//			PreviousHitNormal = ConstrainNormalToPlane(Hit.Normal);
+	//		}
+	//		else
+	//		{
+	//			checkNoEntry();
+	//		}
 
-				if (NumImpacts <= BounceAdditionalIterations)
-				{
-					Iterations--;
-				}
-			}
+	//		if (SubTickTimeRemaining >= MinTickTime)
+	//		{
+	//			RemainingTime += SubTickTimeRemaining;
 
-		}
+	//			if (NumImpacts <= BounceAdditionalIterations)
+	//			{
+	//				Iterations--;
+	//			}
+	//		}
 
-	}
+	//	}
 
-	if (LoopCount >= 2)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Loop Count: %d"), LoopCount);
-	}
+	//}
+
+	//if (LoopCount >= 2)
+	//{
+	//	UE_LOG(LogTemp, Warning, TEXT("Loop Count: %d"), LoopCount);
+	//}
 
 
-	UpdateComponentVelocity();
+	//UpdateComponentVelocity();
 }
 
 USAsteroidMovementComponent::EHandleBlockingHitResult USAsteroidMovementComponent::HandleBlockingHit(const FHitResult& Hit, float TimeTick, const FVector& MoveDelta, float& SubTickTimeRemaining)
@@ -198,6 +224,24 @@ void USAsteroidMovementComponent::StopSimulating(const FHitResult& HitResult)
 	Velocity = FVector::ZeroVector;
 	UpdateComponentVelocity();
 	SetUpdatedComponent(NULL);
+}
+
+void USAsteroidMovementComponent::SetMovementEnabled(bool Enabled)
+{
+	if (auto Subsystem = GetAsteroidCollisionSolver())
+	{
+		if (Enabled)
+		{
+			Subsystem->RegisterAsteroidMovementComponent(this);
+		}
+		else
+		{
+			Subsystem->UnRegisterAsteroidMovementComponent(this);
+		}
+
+		bEnableMovement = Enabled;
+		
+	}
 }
 
 FVector USAsteroidMovementComponent::ComputeMoveDelta(const FVector& InVelocity, float DeltaTime) const
@@ -302,3 +346,4 @@ bool USAsteroidMovementComponent::HandleDeflection(FHitResult& Hit, const FVecto
 
 	return true;
 }
+

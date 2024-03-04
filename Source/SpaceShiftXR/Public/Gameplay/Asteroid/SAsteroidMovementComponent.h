@@ -6,6 +6,8 @@
 #include "GameFramework/MovementComponent.h"
 #include "SAsteroidMovementComponent.generated.h"
 
+class USAsteroidCollisionSolver;
+
 /**
  * 
  */
@@ -47,8 +49,9 @@ public:
 		Abort,					/** Abort all further simulation. Typically used when components have been invalidated or simulation should stop. */
 	};
 
-	bool bEnableMovement = false;
+	
 
+	void SetMovementEnabled(bool Enabled);
 
 	float MaxSpeed = 1000.f;
 
@@ -64,4 +67,14 @@ public:
 	void StopSimulating(const FHitResult& HitResult);
 	FVector ComputeBounceResult(const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta);
 	bool HandleDeflection(FHitResult& Hit, const FVector& OldVelocity, const uint32 NumBounces, float& SubTickTimeRemaining);
+
+protected:
+
+	virtual void BeginPlay() override;
+	USAsteroidCollisionSolver* GetAsteroidCollisionSolver() const;
+
+private:
+	bool bEnableMovement = false;
+	//ASAsteroidCollisionSolver* AsteroidCollisionSolver;
+
 };
