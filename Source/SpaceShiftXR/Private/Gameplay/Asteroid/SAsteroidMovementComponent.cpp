@@ -14,6 +14,8 @@ USAsteroidMovementComponent::USAsteroidMovementComponent()
 	MaxSimulationIterations = 4;
 }
 
+
+
 void USAsteroidMovementComponent::BeginPlay()
 {
 	//if (auto FoundActor = UGameplayStatics::GetActorOfClass(this, ASAsteroidCollisionSolver::StaticClass()))
@@ -228,6 +230,11 @@ void USAsteroidMovementComponent::StopSimulating(const FHitResult& HitResult)
 
 void USAsteroidMovementComponent::SetMovementEnabled(bool Enabled)
 {
+	if (bEnableMovement == Enabled)
+	{
+		return;
+	}
+
 	if (auto Subsystem = GetAsteroidCollisionSolver())
 	{
 		if (Enabled)

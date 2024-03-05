@@ -3,6 +3,7 @@
 
 #include "Gameplay/Asteroid/SAsteroidCollisionSolver.h"
 #include "Gameplay/Asteroid/SAsteroidMovementComponent.h"
+#include "Gameplay/Asteroid/SAsteroid.h"
 
 // Sets default values
 USAsteroidCollisionSolver::USAsteroidCollisionSolver()
@@ -33,7 +34,7 @@ void USAsteroidCollisionSolver::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	UE_LOG(LogTemp, Warning, TEXT("I have %d Asteroids registered"), AstroidMovementComponents.Num());
+	//UE_LOG(LogTemp, Warning, TEXT("I have %d Asteroids registered"), AstroidMovementComponents.Num());
 
 	// Process collisions with room collisions
 	TickHandleAstroidMovement(DeltaTime);
@@ -43,6 +44,7 @@ void USAsteroidCollisionSolver::Tick(float DeltaTime)
 
 void USAsteroidCollisionSolver::TickHandleAstroidMovement(float DeltaTime)
 {
+	CollisionResultMap.Empty();
 	TArray<USAsteroidMovementComponent*> MovementComponentsToRemove;
 
 	for (int32 i = 0; i < AstroidMovementComponents.Num(); ++i)
@@ -153,6 +155,37 @@ FVector USAsteroidCollisionSolver::ComputeMoveDelta(USAsteroidMovementComponent*
 
 FVector USAsteroidCollisionSolver::ComputeBounceResult(USAsteroidMovementComponent* MovementComp, const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta)
 {
+	// Check if we hit an asteroid
+	if (ASAsteroid* HitAsteroid = Cast<ASAsteroid>(Hit.GetActor()))
+	{
+		// If we hit an asteroid then the other asteroid may have already computed our resulting velocity
+		if (CollisionResultMap.Contains(MovementComp))
+		{
+			const FVector V1Final = CollisionResultMap[MovementComp];
+			UE_LOG(LogTemp, Warning, TEXT("I hit an asteroid, has entry in map, V1:%s"), *V1Final.ToString());
+			return V1Final;
+		}
+
+		if (USAsteroidMovementComponent* OtherMovementComp = HitAsteroid->GetComponentByClass<USAsteroidMovementComponent>())
+		{
+			FVector V1Final;
+			FVector V2Final;
+			ComputeAsteroidCollisionVelocities(MovementComp, OtherMovementComp, V1Final, V2Final);
+			CollisionResultMap.Emplace(MovementComp, V1Final);
+			CollisionResultMap.Emplace(OtherMovementComp, V2Final);
+
+
+			UE_LOG(LogTemp, Warning, TEXT("I hit an asteroid, no entry in map, V1:%s, V2:%s"), *V1Final.ToString(), *V2Final.ToString());
+
+
+			OtherMovementComp->Velocity = V2Final;
+			OtherMovementComp->UpdateComponentVelocity();
+
+			return V1Final;
+		}
+	}
+	
+
 	FVector TempVelocity = MovementComp->Velocity;
 	const FVector Normal = MovementComp->ConstrainNormalToPlane(Hit.Normal);
 	const float VDotNormal = (TempVelocity | Normal);
@@ -282,6 +315,23 @@ void USAsteroidCollisionSolver::StopSimulating(USAsteroidMovementComponent* Move
 	MovementComp->Velocity = FVector::ZeroVector;
 	MovementComp->UpdateComponentVelocity();
 	MovementComp->SetUpdatedComponent(NULL);
+}
+
+void USAsteroidCollisionSolver::ComputeAsteroidCollisionVelocities(USAsteroidMovementComponent* MovementComp1, USAsteroidMovementComponent* MovementComp2, FVector& V1Final, FVector& V2Final)
+{
+	if (!MovementComp1 || !MovementComp2)
+	{
+		return;
+	}
+
+	const float Mass1 = MovementComp1->Mass;
+	const float Mass2 = MovementComp2->Mass;
+
+	const FVector Velocity1Initial = MovementComp1->Velocity;
+	const FVector Velocity2Initial = MovementComp2->Velocity;
+
+	V1Final = ((Mass1 - Mass2) * Velocity1Initial + (1.f + 0.3f) * Mass2 * Velocity2Initial) / (Mass1 + Mass2);
+	V2Final = ((1.f + 0.3) * Mass1 * Velocity1Initial + (Mass2 - Mass1) * Velocity2Initial) / (Mass1 + Mass2);
 }
 
 bool USAsteroidCollisionSolver::HandleDeflection(USAsteroidMovementComponent* MovementComp, FHitResult& Hit, const FVector& OldVelocity, const uint32 NumBounces, float& SubTickTimeRemaining)

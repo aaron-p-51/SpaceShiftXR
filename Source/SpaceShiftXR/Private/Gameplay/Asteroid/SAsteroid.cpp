@@ -48,8 +48,11 @@ void ASAsteroid::BeginPlay()
 		InitializeAsteroid(DataAsset);
 	}
 
-	const float Size = (DataAsset->MinScale + DataAsset->MaxScale) / 2.f;
-	SetActorScale3D(FVector(Size, Size, Size));
+	if (SizeOverride == 0.f)
+	{
+		const float Size = (DataAsset->MinScale + DataAsset->MaxScale) / 2.f;
+		SetActorScale3D(FVector(Size, Size, Size));
+	}
 #endif
 
 }
@@ -101,8 +104,20 @@ void ASAsteroid::InitializeAsteroid(TObjectPtr<USAsteroidPrimaryDataAsset> Aster
 		GenerateFragmentSpawnLocations();
 	}
 
-	AstroidMovementComp->SetMovementEnabled(true);
-	AstroidMovementComp->Velocity = GetRandomPointInUnitSphere() * 10.f;
+
+	
+	const float CenterScale = (DataAsset->MinScale + DataAsset->MaxScale) / 2.f;
+	AstroidMovementComp->Mass = DataAsset->DefaultMass * Size / CenterScale;
+
+	if (MassOverride != 0.f)
+	{
+		AstroidMovementComp->Mass = MassOverride;
+	}
+
+	if (SizeOverride != 0.f)
+	{
+		SetActorScale3D(FVector(SizeOverride, SizeOverride, SizeOverride));
+	}
 
 	/*MovementComp->InitialSpeed = 10.f;
 	MovementComp->MaxSpeed = 500.f;
@@ -250,6 +265,12 @@ USPoolSubsystem* ASAsteroid::GetPoolSubsystem() const
 	return nullptr;
 }
 
+void ASAsteroid::SetVelocity(const FVector& Velocity)
+{
+	AstroidMovementComp->SetMovementEnabled(true);
+	AstroidMovementComp->Velocity = Velocity;
+}
+
 #if WITH_EDITOR
 void ASAsteroid::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -272,8 +293,16 @@ void ASAsteroid::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				SphereComp->SetSphereRadius(DataAsset->CollisionRadius);
 			}
 
-			const float Size = (DataAsset->MinScale + DataAsset->MaxScale) / 2.f;
-			SetActorScale3D(FVector(Size, Size, Size));
+
+			if (SizeOverride != 0.f)
+			{
+				const float Size = (DataAsset->MinScale + DataAsset->MaxScale) / 2.f;
+				SetActorScale3D(FVector(Size, Size, Size));
+			}
+			else
+			{
+				SetActorScale3D(FVector(SizeOverride, SizeOverride, SizeOverride));
+			}
 		}
 	}
 }

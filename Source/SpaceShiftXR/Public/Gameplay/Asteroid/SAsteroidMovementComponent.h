@@ -20,6 +20,8 @@ public:
 
 	USAsteroidMovementComponent();
 
+	float Mass;
+
 	// From projectile movement
 	float PreviousHitTime;
 	bool bIsSliding;

@@ -9,6 +9,8 @@
 
 class USAsteroidMovementComponent;
 
+
+
 UCLASS()
 class SPACESHIFTXR_API USAsteroidCollisionSolver : public UTickableWorldSubsystem
 {
@@ -55,5 +57,9 @@ public:
 	void HandleImpact(USAsteroidMovementComponent* MovementComp, const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta);
 	void StopSimulating(USAsteroidMovementComponent* MovementComp, const FHitResult& HitResult);
 
+	void ComputeAsteroidCollisionVelocities(USAsteroidMovementComponent* MovementComp1, USAsteroidMovementComponent* MovementComp2, FVector& V1Final, FVector& V2Final);
 
+
+	UPROPERTY()
+	TMap<USAsteroidMovementComponent*, FVector> CollisionResultMap;
 };

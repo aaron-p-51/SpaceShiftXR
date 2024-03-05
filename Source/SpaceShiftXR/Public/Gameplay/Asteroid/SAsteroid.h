@@ -24,6 +24,12 @@ public:
 	// Sets default values for this actor's properties
 	ASAsteroid();
 
+	UPROPERTY(EditAnywhere)
+	float MassOverride;
+
+	UPROPERTY(EditAnywhere)
+	float SizeOverride;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Configuration")
 	TObjectPtr<USAsteroidPrimaryDataAsset> DataAsset;
 
@@ -41,6 +47,9 @@ public:
 
 
 	USPoolSubsystem* GetPoolSubsystem() const;
+
+	UFUNCTION(BlueprintCallable)
+	void SetVelocity(const FVector& Velocity);
 
 protected:
 
