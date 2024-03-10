@@ -8,7 +8,7 @@ public class SpaceShiftXR : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "AndroidPermission" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "AndroidPermission", "SimplePhysics" });
 
 		//PrivateDependencyModuleNames.AddRange(new string[] {  });
 

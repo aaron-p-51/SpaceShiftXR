@@ -8,6 +8,7 @@
 #include "Gameplay/Asteroid/SAsteroidPrimaryDataAsset.h"
 #include "Gameplay/Asteroid/SAsteroidSpawner.h"
 #include "Gameplay/Asteroid/SAsteroidMovementComponent.h"
+#include "SimplePhysicsRigidBodyComponent.h"
 #include "SPoolSubsystem.h"
 
 
@@ -29,7 +30,8 @@ ASAsteroid::ASAsteroid()
 	SphereComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SphereComp->SetGenerateOverlapEvents(false);
 
-	AstroidMovementComp = CreateDefaultSubobject<USAsteroidMovementComponent>(TEXT("MovementComp"));
+	//AstroidMovementComp = CreateDefaultSubobject<USAsteroidMovementComponent>(TEXT("MovementComp"));
+	SimpleRigidBodyComp = CreateDefaultSubobject<USimplePhysicsRigidBodyComponent>(TEXT("SimplePhysicsRigidBody"));
 }
 
 
@@ -107,11 +109,11 @@ void ASAsteroid::InitializeAsteroid(TObjectPtr<USAsteroidPrimaryDataAsset> Aster
 
 	
 	const float CenterScale = (DataAsset->MinScale + DataAsset->MaxScale) / 2.f;
-	AstroidMovementComp->Mass = DataAsset->DefaultMass * Size / CenterScale;
+	SimpleRigidBodyComp->Mass = DataAsset->DefaultMass * Size / CenterScale;
 
 	if (MassOverride != 0.f)
 	{
-		AstroidMovementComp->Mass = MassOverride;
+		SimpleRigidBodyComp->Mass = MassOverride;
 	}
 
 	if (SizeOverride != 0.f)
@@ -267,8 +269,8 @@ USPoolSubsystem* ASAsteroid::GetPoolSubsystem() const
 
 void ASAsteroid::SetVelocity(const FVector& Velocity)
 {
-	AstroidMovementComp->SetMovementEnabled(true);
-	AstroidMovementComp->Velocity = Velocity;
+	SimpleRigidBodyComp->SetSimulationEnabled(true);
+	SimpleRigidBodyComp->Velocity = Velocity;
 }
 
 #if WITH_EDITOR

@@ -5,7 +5,15 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
-class FSimplePhysicsSolverModule : public IModuleInterface
+enum class EHandleBlockingHitResult
+{
+	Deflect,
+	AdvanceNextSubstep,
+	Abort,
+	HitRigidBody
+};
+
+class FSimplePhysicsModule : public IModuleInterface
 {
 public:
 

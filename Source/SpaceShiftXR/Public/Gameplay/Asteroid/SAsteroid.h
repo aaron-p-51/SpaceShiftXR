@@ -12,7 +12,8 @@ class USphereComponent;
 class USAsteroidPrimaryDataAsset;
 class ASAsteroidSpawner;
 class USPoolSubsystem;
-class USAsteroidMovementComponent;
+//class USAsteroidMovementComponent;
+class USimplePhysicsRigidBodyComponent;
 
 
 UCLASS()
@@ -63,8 +64,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> MeshComp;
 
+	//UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Components")
+	//TObjectPtr<USAsteroidMovementComponent> AstroidMovementComp;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Components")
-	TObjectPtr<USAsteroidMovementComponent> AstroidMovementComp;
+	TObjectPtr<USimplePhysicsRigidBodyComponent> SimpleRigidBodyComp;
 	
 	
 

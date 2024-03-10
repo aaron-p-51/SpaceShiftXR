@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class SimplePhysicsSolver : ModuleRules
+public class SimplePhysics : ModuleRules
 {
-	public SimplePhysicsSolver(ReadOnlyTargetRules Target) : base(Target)
+	public SimplePhysics(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
