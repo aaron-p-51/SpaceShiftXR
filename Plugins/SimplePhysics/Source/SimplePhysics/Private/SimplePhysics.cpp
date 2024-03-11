@@ -3,7 +3,8 @@
 #include "SimplePhysics.h"
 
 #include "SimplePhysics_Settings.h"
-#include "ISettingsModule.h"
+//#include "ISettingsModule.h"
+#include "Developer/Settings/Public/ISettingsModule.h"
 
 #define LOCTEXT_NAMESPACE "FSimplePhysicsModule"
 

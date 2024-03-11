@@ -6,7 +6,16 @@
 #include "SimplePhysics_Settings.h"
 #include "SimplePhysicsSolver.h"
 
-
+USimplePhysicsRigidBodyComponent::USimplePhysicsRigidBodyComponent()
+{
+	bUseGravity = false;
+	Mass = 100.f;
+	Friction = 0.2f;
+	MinFrictionFraction = 0.f;
+	Bounciness = 0.6f;
+	LinearDamping = 0.f;
+	MaxSpeed = 1000.f;
+}
 
 void USimplePhysicsRigidBodyComponent::InitializeComponent()
 {
@@ -54,6 +63,13 @@ void USimplePhysicsRigidBodyComponent::AddForce(const FVector& Force)
 	}
 }
 
+
+FVector USimplePhysicsRigidBodyComponent::GetLinearDragForce(const FVector& InVelocity) const
+{
+	return 0.5f * -InVelocity.GetSafeNormal() * InVelocity.SizeSquared() * LinearDamping;
+}
+
+
 FVector USimplePhysicsRigidBodyComponent::ComputeMoveDelta(const FVector& InVelocity, float DeltaTime) const
 {
 	// Velocity Verlet integration (http://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet)
@@ -70,13 +86,26 @@ FVector USimplePhysicsRigidBodyComponent::ComputeMoveDelta(const FVector& InVelo
 }
 
 
+
+
 FVector USimplePhysicsRigidBodyComponent::ComputeVelocity(const FVector& InitialVelocity, float DeltaTime) const
 {
 	// v = v0 + a*t
 	const FVector Acceleration = ComputeAcceleration(InitialVelocity, DeltaTime);
-	FVector NewVelocity = InitialVelocity + (Acceleration * DeltaTime);
+	const FVector NewVelocity = InitialVelocity + (Acceleration * DeltaTime);
 
 	return LimitVelocity(NewVelocity);
+}
+
+
+void USimplePhysicsRigidBodyComponent::SetVelocity(const FVector& NewVelocity, bool UpdateVelocity)
+{
+	Velocity = LimitVelocity(NewVelocity);
+
+	if (UpdateVelocity)
+	{
+		UpdateComponentVelocity();
+	}
 }
 
 
@@ -91,8 +120,22 @@ FVector USimplePhysicsRigidBodyComponent::LimitVelocity(FVector NewVelocity) con
 	return ConstrainDirectionToPlane(NewVelocity);
 }
 
+
+FVector USimplePhysicsRigidBodyComponent::LimitVelocityFromCurrent()
+{
+	const float CurrentMaxSpeed = GetMaxSpeed();
+	if (CurrentMaxSpeed > 0.f)
+	{
+		Velocity = Velocity.GetClampedToMaxSize(CurrentMaxSpeed);
+	}
+
+	return ConstrainDirectionToPlane(Velocity);
+}
+
+
 FVector USimplePhysicsRigidBodyComponent::ComputeAcceleration(const FVector& InitialVelocity, float DeltaTime) const
 {
+	check(Mass != 0.f);
 
 	FVector Acceleration(FVector::ZeroVector);
 	
@@ -101,14 +144,14 @@ FVector USimplePhysicsRigidBodyComponent::ComputeAcceleration(const FVector& Ini
 		Acceleration.Z += GetGravityZ();
 	}
 
-	if (HasPendingForce())
-	{
-		check(Mass != 0.f)
-		Acceleration += GetPendingForce() / Mass;
-	}
+	FVector Force = GetLinearDragForce(InitialVelocity);
+	Force += GetPendingForce();
+
+	Acceleration += (Force / Mass);
 
 	return Acceleration;
 }
+
 
 void USimplePhysicsRigidBodyComponent::SetMovementVelocityFromNoHit(const FVector& OldVelocity, float DeltaTime)
 {
@@ -121,11 +164,12 @@ void USimplePhysicsRigidBodyComponent::SetMovementVelocityFromNoHit(const FVecto
 	}
 }
 
+
 void USimplePhysicsRigidBodyComponent::StopAllMovementImmediately()
 {
-	Velocity = FVector::ZeroVector;
-	UpdateComponentVelocity();
+	SetVelocity(FVector::ZeroVector);
 }
+
 
 bool USimplePhysicsRigidBodyComponent::HasStoppedSimulation() const
 {
@@ -165,7 +209,20 @@ EHandleBlockingHitResult USimplePhysicsRigidBodyComponent::HandleBlockingHit(con
 
 void USimplePhysicsRigidBodyComponent::HandleImpact(const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta)
 {
+	const FVector NormalT = ConstrainNormalToPlane(FVector(-1.f, 0.f, 0.f));
+	UE_LOG(LogTemp, Warning, TEXT("Test Normal: %s"), *NormalT.ToString());
+
 	bool bStopSimulating = false;
+
+	//const FVector OldVelocity = Velocity;
+	//Velocity = ComputeBounceResult(Hit, TimeSlice, MoveDelta);
+
+	//// Broadcast Event here
+
+	//// Event may cause properties to change, ensure velocity is within valid range
+	//Velocity = LimitVelocityFromCurrent();
+
+
 
 	if (true /*bShouldBounce*/)
 	{
@@ -193,6 +250,8 @@ void USimplePhysicsRigidBodyComponent::HandleImpact(const FHitResult& Hit, float
 		SetSimulationEnabled(false);
 	}
 }
+
+
 
 
 FVector USimplePhysicsRigidBodyComponent::ComputeBounceResult(const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta)

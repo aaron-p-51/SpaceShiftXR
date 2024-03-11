@@ -7,4 +7,5 @@ USimplePhysics_Settings::USimplePhysics_Settings(const FObjectInitializer& obj)
 {
 	GravityAcceleration = 980.f;
 	MaxSimulationIterations = 3;
+	MinimumSimulationVelocity = 0.01f;
 }

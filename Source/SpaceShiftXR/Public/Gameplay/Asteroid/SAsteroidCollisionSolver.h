@@ -29,6 +29,7 @@ private:
 
 	int32 MaxSimulationIterations = 4;
 
+
 public:	
 
 	// Enum indicating how simulation should proceed after HandleBlockingHit() is called.
@@ -58,6 +59,8 @@ public:
 	void StopSimulating(USAsteroidMovementComponent* MovementComp, const FHitResult& HitResult);
 
 	void ComputeAsteroidCollisionVelocities(USAsteroidMovementComponent* MovementComp1, USAsteroidMovementComponent* MovementComp2, FVector& V1Final, FVector& V2Final);
+	
+
 
 
 	UPROPERTY()

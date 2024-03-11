@@ -25,4 +25,6 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Test Settings")
 	int32 MaxSimulationIterations;
 	
+	UPROPERTY(Config, EditAnywhere, Category = "Test Settings")
+	float MinimumSimulationVelocity;
 };

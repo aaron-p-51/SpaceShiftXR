@@ -17,10 +17,19 @@ class SIMPLEPHYSICS_API USimplePhysicsRigidBodyComponent : public UMovementCompo
 {
 	GENERATED_BODY()
 
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnRigidBodyBounceDelegate, const FHitResult&, ImpactResult, const FVector&, ImpactVelocity, const FVector&, ResultVelocity);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSimulationStopDelegate);
+
 public:
 
+	UPROPERTY(BlueprintAssignable)
+	FOnRigidBodyBounceDelegate OnRigidBodyBounceDelegate;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnSimulationStopDelegate OnSimulationStopDelegate;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float bUseGravity;
+	bool bUseGravity;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Mass;
@@ -29,10 +38,16 @@ public:
 	float Friction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float MinFrictionFraction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Bounciness;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 BounceAdditionalIterations;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float LinearDamping;
 
 	/** Saved HitResult Time (0 to 1) from previous simulation step. Equal to 1.0 when there was no impact. */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = ProjectileBounces)
@@ -43,6 +58,15 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float MaxSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EBounceCombine BounceCombine;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bBounceAngleAffectsFriction;
+
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	//bool bIsSliding;
 
 	/** Saved HitResult Normal from previous simulation step that resulted in an impact. If PreviousHitTime is 1.0, then the hit was not in the last step. */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = ProjectileBounces)
@@ -56,7 +80,11 @@ public:
 	USimplePhysicsSolver* GetSimplePhysicsSolver() const;
 
 	/** Enable movement with the SimplePhysicsSolver Subsystem */
+
+	UFUNCTION(BlueprintCallable)
 	void SetSimulationEnabled(bool Enabled);
+
+	UFUNCTION(BlueprintPure)
 	bool IsSimulationEnabled() const { return bSimulationEnabled; }
 
 	//Begin UMovementComponent Interface
@@ -69,8 +97,12 @@ public:
 	FVector GetPendingForce() const { return PendingForce; }
 	void ClearPendingForce() { PendingForce = FVector::ZeroVector; }
 
+	FVector GetLinearDragForce(const FVector& InVelocity) const;
+
 	/** Compute the distance we should move the RigidBody given time, at a given a velocity. */
 	FVector ComputeMoveDelta(const FVector& InVelocity, float DeltaTime) const;
+
+	void SetVelocity(const FVector& NewVelocity, bool UpdateVelocity = true);
 
 	/**
 	 * Given an initial velocity and a time step, compute a new velocity
@@ -83,6 +115,7 @@ public:
 	FVector ComputeVelocity(const FVector& InitialVelocity, float DeltaTime) const;
 
 	FVector LimitVelocity(FVector NewVelocity) const;
+	FVector LimitVelocityFromCurrent();
 
 	/** Compute the acceleration that will be applied */
 	FVector ComputeAcceleration(const FVector& InitialVelocity, float DeltaTime) const;
@@ -99,6 +132,8 @@ public:
 
 	EHandleBlockingHitResult HandleBlockingHit(const FHitResult& Hit, float TimeTick, const FVector& MoveDelta, float& SubTickTimeRemaining);
 	void HandleImpact(const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta);
+
+	USimplePhysicsRigidBodyComponent();
 
 protected:
 

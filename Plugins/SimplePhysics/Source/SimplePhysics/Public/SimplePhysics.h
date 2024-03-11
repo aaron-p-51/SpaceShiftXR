@@ -13,6 +13,17 @@ enum class EHandleBlockingHitResult
 	HitRigidBody
 };
 
+UENUM()
+enum class EBounceCombine : uint8
+{
+	Minimum			UMETA(DisplayName = "Minimum"),
+	Maximum			UMETA(DisplayName = "Maximum"),
+	Average			UMETA(DisplayName = "Average"),
+	Ignore			UMETA(DisplayName = "Ignore"),
+
+	MAX				UMETA(DisplayName = "DefaultMax")
+};
+
 class FSimplePhysicsModule : public IModuleInterface
 {
 public:
