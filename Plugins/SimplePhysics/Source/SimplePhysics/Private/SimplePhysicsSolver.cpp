@@ -28,6 +28,7 @@ void USimplePhysicsSolver::PostInitialize()
 	}
 }
 
+
 void USimplePhysicsSolver::SetSimulationEnabled(AActor* Actor, bool Enabled)
 {
 	if (Actor)
@@ -37,6 +38,12 @@ void USimplePhysicsSolver::SetSimulationEnabled(AActor* Actor, bool Enabled)
 			SetSimulationEnabled(RigidBodyComponent, Enabled);
 		}
 	}
+}
+
+
+bool USimplePhysicsSolver::IsSimulating(const USimplePhysicsRigidBodyComponent* RigidBody) const
+{
+	return SimulatedRigidBodies.Contains(RigidBody) || AddRigidBodies.Contains(RigidBody);
 }
 
 
@@ -63,6 +70,7 @@ void USimplePhysicsSolver::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// Ensure SimulatedRigidBodies is current before applying movement logic. 
 	RegisterRigidBodies();
 
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_SimplePhysicsSolver_TickComponent);
@@ -94,6 +102,9 @@ void USimplePhysicsSolver::ValidateRigidBodyTick(float DeltaTime)
 
 	UE_LOG(LogTemp, Warning, TEXT("Simulating Rigid Bodies:%d"), SimulatedRigidBodies.Num());
 
+	// Process movement for all SimulatedRigidBodies. If during the movement process the RigidBody
+	// becomes invalid add it to the InvalidRigidBodies list. These Rigidbodies will then be removed at the
+	// start of the next frame when RegisterRigidBodies() is called
 	for (auto RigidBody : SimulatedRigidBodies)
 	{
 		if (!RigidBody || !IsValid(RigidBody->UpdatedComponent))
@@ -102,9 +113,11 @@ void USimplePhysicsSolver::ValidateRigidBodyTick(float DeltaTime)
 			continue;
 		}
 
-		const bool ValidTick = TickRigidBody(RigidBody, DeltaTime);
-		
-		if (!ValidTick)
+		if (CanSimulateRigidBodyMovement(RigidBody, DeltaTime))
+		{
+			ApplyRigidBodyMovement(RigidBody, DeltaTime);
+		}
+		else
 		{
 			InvalidRigidBodies.Add(RigidBody);
 		}
@@ -112,41 +125,25 @@ void USimplePhysicsSolver::ValidateRigidBodyTick(float DeltaTime)
 }
 
 
-bool USimplePhysicsSolver::TickRigidBody(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, float DeltaTime)
+bool USimplePhysicsSolver::CanSimulateRigidBodyMovement(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, float DeltaTime) const
 {
-	CSV_SCOPED_TIMING_STAT_EXCLUSIVE(TickRigidBody);
-
-	if (RigidBody->HasStoppedSimulation() || RigidBody->ShouldSkipUpdate(DeltaTime))
-	{
-		return false;
-	}
-
-	if (!IsValid(RigidBody->UpdatedComponent))
-	{
-		return false;
-	}
-
-	if (RigidBody->UpdatedComponent->IsSimulatingPhysics())
-	{
-		return false;
-	}
-
-	ApplyRigidBodyMovement(RigidBody, DeltaTime);
-	return true;
+	return RigidBody && IsValid(RigidBody->UpdatedComponent) &&
+		   !RigidBody->ShouldSkipUpdate(DeltaTime) &&
+		   !RigidBody->UpdatedComponent->IsSimulatingPhysics();
 }
 
 
 void USimplePhysicsSolver::ApplyRigidBodyMovement(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, float DeltaTime)
 {
 	float RemainingTime = DeltaTime;
-	int32 NumImpacts = 0;
+	//int32 NumImpacts = 0;
 	int32 NumBounces = 0;
 	int32 LoopCount = 0;
 	int32 Iterations = 0;
 	FHitResult Hit(1.f);
 	
 
-	while (RigidBody->IsSimulationEnabled() && RemainingTime >= MIN_TICK_TIME && (Iterations < MaxSimulationIterations) &&  !RigidBody->HasStoppedSimulation())
+	while (RemainingTime >= MIN_TICK_TIME && (Iterations < MaxSimulationIterations) && RigidBody->UpdatedComponent && RigidBody->IsActive())
 	{
 		LoopCount++;
 		Iterations++;
@@ -186,7 +183,7 @@ void USimplePhysicsSolver::ApplyRigidBodyMovement(TObjectPtr<USimplePhysicsRigid
 				RigidBody->Velocity = (Hit.Time > UE_KINDA_SMALL_NUMBER) ? NewVelocity : OldVelocity;
 			}
 
-			NumImpacts++;
+			//NumImpacts++;
 			float SubTickTimeRemaining = TimeTick * (1.f - Hit.Time);
 
 			if (ShouldAbort(RigidBody, Hit))
@@ -194,23 +191,30 @@ void USimplePhysicsSolver::ApplyRigidBodyMovement(TObjectPtr<USimplePhysicsRigid
 				break;
 			}
 
-			bool StillSimulating = true;
 			if (USimplePhysicsRigidBodyComponent* OtherHitRigidBody = GetOtherHitRigidBody(Hit))
 			{
-				HandleRigidBodyCollision(RigidBody, OtherHitRigidBody);
+				HandleRigidBodyCollision(RigidBody, OtherHitRigidBody, Hit);
 			}
 			else
 			{
-				StillSimulating = HandleImpact(RigidBody, Hit, TimeTick, MoveDelta);
+				HandleImpact(RigidBody, Hit, TimeTick, MoveDelta);
 			}
 
-			if (!StillSimulating || ShouldAbort(RigidBody, Hit))
+			if (ShouldAbort(RigidBody, Hit))
 			{
 				break;
 			}
 
-			RigidBody->PreviousHitTime = Hit.Time;
-			RigidBody->PreviousHitNormal = RigidBody->ConstrainNormalToPlane(Hit.Normal);
+			// Add Handle Deflection similar the projectile movement here if needed
+
+			if (IsBelowSimulationVelocity(RigidBody))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("IsBelowSimulationVelocity"));
+				StopSimulating(RigidBody);
+				break;
+			}
+
+			RigidBody->SetLastBlockingHitResult(Hit);
 			RigidBody->LimitVelocityFromCurrent();
 
 
@@ -220,38 +224,21 @@ void USimplePhysicsSolver::ApplyRigidBodyMovement(TObjectPtr<USimplePhysicsRigid
 			}
 		}
 
-	
-
-		if (IsBelowSimulationVelocity(RigidBody))
-		{
-			UE_LOG(LogTemp, Warning, TEXT("IsBelowSimulationVelocity"));
-			StopSimulating(RigidBody);
-		}
-
 		RigidBody->UpdateComponentVelocity();
 	}
 }
 
 
-bool USimplePhysicsSolver::HandleImpact(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta)
+void USimplePhysicsSolver::HandleImpact(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta)
 {
 	const FVector OldVelocity = RigidBody->Velocity;
-
 	FVector NewVelocity = ComputeBounceResult(RigidBody, Hit, TimeSlice, MoveDelta);
 
-	// Broadcast
 	RigidBody->OnRigidBodyBounceDelegate.Broadcast(Hit, OldVelocity, NewVelocity);
 
 	RigidBody->SetVelocity(NewVelocity);
-	if (IsBelowSimulationVelocity(RigidBody))
-	{
-		StopSimulating(RigidBody);
-		return false;
-	}
-
-
-	return true;
 }
+
 
 FVector USimplePhysicsSolver::ComputeBounceResult(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta)
 {
@@ -268,7 +255,7 @@ FVector USimplePhysicsSolver::ComputeBounceResult(TObjectPtr<USimplePhysicsRigid
 		// Point velocity in direction parallel to surface
 		TempVelocity += ProjectedNormal;
 
-		const bool SouldScaleFriction = RigidBody->bIsSliding || RigidBody->bBounceAngleAffectsFriction;
+		const bool SouldScaleFriction = /* RigidBody->bIsSliding || */ RigidBody->bBounceAngleAffectsFriction;
 		if (SouldScaleFriction)
 		{
 			// Get how much parrel the bounce angle is to the surface. The closer to parrel the more friction to apply
@@ -298,14 +285,13 @@ bool USimplePhysicsSolver::IsBelowSimulationVelocity(TObjectPtr<USimplePhysicsRi
 
 void USimplePhysicsSolver::StopSimulating(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody)
 {
-	InvalidRigidBodies.Add(RigidBody);
-	RigidBody->Velocity = FVector::ZeroVector;
-	RigidBody->ClearPendingForce();
-	RigidBody->UpdateComponentVelocity();
-	RigidBody->OnSimulationStopDelegate.Broadcast();
+	if (!RigidBody->HasPendingForce())
+	{
+		InvalidRigidBodies.Add(RigidBody);
+		RigidBody->SetVelocity(FVector::ZeroVector);
+		RigidBody->OnSimulationStopDelegate.Broadcast();
+	}
 }
-
-
 
 
 bool USimplePhysicsSolver::ShouldAbort(USimplePhysicsRigidBodyComponent* RigidBody, const FHitResult& Hit) const
@@ -342,39 +328,41 @@ TObjectPtr<USimplePhysicsRigidBodyComponent> USimplePhysicsSolver::GetOtherHitRi
 }
 
 
-
-
-
-
-void USimplePhysicsSolver::HandleRigidBodyCollision(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, TObjectPtr<USimplePhysicsRigidBodyComponent> OtherRigidBody)
+void USimplePhysicsSolver::HandleRigidBodyCollision(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, TObjectPtr<USimplePhysicsRigidBodyComponent> OtherRigidBody, const FHitResult& Hit)
 {
-	UE_LOG(LogTemp, Warning, TEXT("HandleRigidBodyCollision"));
-
 	if (RigidCollisionResultMap.Contains(RigidBody))
 	{
 		RigidBody->SetVelocity(RigidCollisionResultMap[RigidBody]);
 	}
 	else
 	{
-		FVector V1Final, V2Final;
-		if (ComputeRigidBodyCollision(RigidBody, OtherRigidBody, V1Final, V2Final))
+		const bool OtherRigidBodySimulating = SimulatedRigidBodies.Contains(OtherRigidBody);
+		if (OtherRigidBodySimulating || OtherRigidBody->bEnableSimulationOnRigidBodyCollision)
 		{
-			RigidCollisionResultMap.Emplace(RigidBody, V1Final);
-			RigidCollisionResultMap.Emplace(OtherRigidBody, V2Final);
-
-			RigidBody->SetVelocity(V1Final);
-
-			if (OtherRigidBody->bEnableSimulationOnRigidBodyCollision)
+			FVector V1Final, V2Final;
+			if (ComputeRigidBodyCollision(RigidBody, OtherRigidBody, V1Final, V2Final))
 			{
+				RigidCollisionResultMap.Emplace(RigidBody, V1Final);
+				RigidCollisionResultMap.Emplace(OtherRigidBody, V2Final);
+
+				RigidBody->SetVelocity(V1Final);
 				OtherRigidBody->SetVelocity(V2Final);
-				OtherRigidBody->SetSimulationEnabled(true);
+
+				if (!OtherRigidBodySimulating)
+				{
+					OtherRigidBody->SetSimulationEnabled(true);
+				}
 			}
+		}
+		else
+		{
+			HandleImpact(RigidBody, Hit, 0.f, FVector());
 		}
 	}
 }
 
 
-bool USimplePhysicsSolver::ComputeRigidBodyCollision(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody1, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody2, FVector& V1, FVector& V2) const
+bool USimplePhysicsSolver::ComputeRigidBodyCollision(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody1, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody2, FVector& Velocity1, FVector& Velocity2) const
 {
 	if (!RigidBody1 || !RigidBody2)
 	{
@@ -384,48 +372,25 @@ bool USimplePhysicsSolver::ComputeRigidBodyCollision(TObjectPtr<USimplePhysicsRi
 	const float Mass1 = RigidBody1->Mass;
 	const float Mass2 = RigidBody2->Mass;
 
-	const FVector Velocity1Initial = RigidBody1->Velocity;
-	const FVector Velocity2Initial = RigidBody2->Velocity;
+	check(Mass1 > 0.f && Mass2 > 0.f);
 
-	const float V1CoefficientOfRestitution = GetBounceFactor(RigidBody1, RigidBody2);
-	const float V2CoefficientOfRestitution = GetBounceFactor(RigidBody2, RigidBody1);
+	Velocity1 = RigidBody1->Velocity;
+	Velocity2 = RigidBody2->Velocity;
 
-	V1 = ((Mass1 - Mass2) * Velocity1Initial + (1.f + V1CoefficientOfRestitution) * Mass2 * Velocity2Initial) / (Mass1 + Mass2);
-	V2 = ((1.f + V2CoefficientOfRestitution) * Mass1 * Velocity1Initial + (Mass2 - Mass1) * Velocity2Initial) / (Mass1 + Mass2);
+	// Calculate relative velocity
+	const FVector RelativeVelocity = Velocity2 - Velocity1;
+
+	// Calculate collision normal
+	const FVector CollisionNormal = (RigidBody2->UpdatedComponent->GetComponentLocation() - RigidBody1->UpdatedComponent->GetComponentLocation()).GetSafeNormal();
+
+	// Calculate impulse along the normal
+	float Impulse = (2.0f * Mass1 * Mass2) / (Mass1 + Mass2) * FVector::DotProduct(RelativeVelocity, CollisionNormal);
+
+	// Update velocities
+	const float V1RestitutionCoefficient = RigidBody1->GetRestitutionCoefficient(RigidBody2);//		GetRestitutionCoefficient(RigidBody1, RigidBody2);
+	const float V2RestitutionCoefficient = RigidBody2->GetRestitutionCoefficient(RigidBody1);
+	Velocity1 += (V1RestitutionCoefficient * Impulse / Mass1) * CollisionNormal;
+	Velocity2 -= (V2RestitutionCoefficient * Impulse / Mass2) * CollisionNormal;
 
 	return true;
 }
-
-
-float USimplePhysicsSolver::GetBounceFactor(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, TObjectPtr<USimplePhysicsRigidBodyComponent> OtherRidigBody) const
-{
-	const float DefaultRigidBodyBounceFactor = RigidBody->Bounciness;
-	const float DefaultOtherRigidBodyBounceFactor = OtherRidigBody->Bounciness;
-
-	float RigidBodyBouceFactor = DefaultRigidBodyBounceFactor;
-
-	switch (RigidBody->BounceCombine)
-	{
-		case EBounceCombine::Maximum:
-			RigidBodyBouceFactor = FMath::Max(DefaultRigidBodyBounceFactor, DefaultOtherRigidBodyBounceFactor);
-			break;
-
-		case EBounceCombine::Minimum:
-			RigidBodyBouceFactor = FMath::Max(DefaultRigidBodyBounceFactor, DefaultOtherRigidBodyBounceFactor);
-			break;
-
-		case EBounceCombine::Average:
-			RigidBodyBouceFactor = (DefaultRigidBodyBounceFactor + DefaultOtherRigidBodyBounceFactor) / 2.f;
-			break;
-
-		// No need for EBounceCombine::Average to set RigidBodyBouceFactor to current value
-
-		default:
-			break;
-	}
-
-	return FMath::Clamp(RigidBodyBouceFactor, 0.f, 1.f);
-}
-
-
-

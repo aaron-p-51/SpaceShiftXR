@@ -9,12 +9,21 @@
 USimplePhysicsRigidBodyComponent::USimplePhysicsRigidBodyComponent()
 {
 	bUseGravity = false;
+	bEnableSimulationOnRigidBodyCollision = true;
 	Mass = 100.f;
 	Friction = 0.2f;
 	MinFrictionFraction = 0.f;
 	Bounciness = 0.6f;
 	LinearDamping = 0.f;
 	MaxSpeed = 1000.f;
+	GravityScale = 1.f;
+
+
+
+	/*PreviousHitTime = 1.f;
+	PreviousHitNormal = FVector::UpVector;*/
+	//bBounceAngleAffectsFriction = false;
+	LastHitResult.Init();
 }
 
 void USimplePhysicsRigidBodyComponent::InitializeComponent()
@@ -41,7 +50,6 @@ USimplePhysicsSolver* USimplePhysicsRigidBodyComponent::GetSimplePhysicsSolver()
 
 void USimplePhysicsRigidBodyComponent::SetSimulationEnabled(bool Enabled)
 {
-	
 	if (!IsValid(UpdatedComponent))
 	{
 		return;
@@ -50,18 +58,14 @@ void USimplePhysicsRigidBodyComponent::SetSimulationEnabled(bool Enabled)
 	if (auto Subsystem = GetSimplePhysicsSolver())
 	{
 		Subsystem->SetSimulationEnabled(this, Enabled);
-		bSimulationEnabled = Enabled;
+		//bSimulationEnabled = Enabled;
 	}
 }
 
 
-
 void USimplePhysicsRigidBodyComponent::AddForce(const FVector& Force)
 {
-	if (bSimulationEnabled)
-	{
-		PendingForce += Force;
-	}
+	PendingForce += Force;
 }
 
 
@@ -107,6 +111,35 @@ void USimplePhysicsRigidBodyComponent::SetVelocity(const FVector& NewVelocity, b
 	{
 		UpdateComponentVelocity();
 	}
+}
+
+float USimplePhysicsRigidBodyComponent::GetRestitutionCoefficient(TObjectPtr<USimplePhysicsRigidBodyComponent> OtherRidigBody) const
+{
+	const float OtherRigidBodyBounciness = OtherRidigBody->Bounciness;
+
+	float RestitutionCoefficient = Bounciness;
+
+	switch (BounceCombine)
+	{
+	case EBounceCombine::Maximum:
+		RestitutionCoefficient = FMath::Max(Bounciness, OtherRigidBodyBounciness);
+		break;
+
+	case EBounceCombine::Minimum:
+		RestitutionCoefficient = FMath::Min(Bounciness, OtherRigidBodyBounciness);
+		break;
+
+	case EBounceCombine::Average:
+		RestitutionCoefficient = (Bounciness + OtherRigidBodyBounciness) / 2.f;
+		break;
+
+		// No need for EBounceCombine::Average to set RigidBodyBouceFactor to current value
+
+	default:
+		break;
+	}
+
+	return FMath::Clamp(RestitutionCoefficient, 0.f, 1.f);
 }
 
 
@@ -156,8 +189,8 @@ FVector USimplePhysicsRigidBodyComponent::ComputeAcceleration(const FVector& Ini
 
 void USimplePhysicsRigidBodyComponent::SetMovementVelocityFromNoHit(const FVector& OldVelocity, float DeltaTime)
 {
-	PreviousHitTime = 1.f;
-	bIsSliding = false;
+	LastHitResult.Time = 1.f;
+	//bIsSliding = false;
 
 	if (Velocity == OldVelocity)
 	{
@@ -174,7 +207,17 @@ void USimplePhysicsRigidBodyComponent::StopAllMovementImmediately()
 
 bool USimplePhysicsRigidBodyComponent::HasStoppedSimulation() const
 {
-	return ((UpdatedComponent == nullptr) || (bSimulationEnabled == false) || (IsActive() == false));
+	if ((UpdatedComponent == nullptr) || !IsActive())
+	{
+		return false;
+	}
+
+	if (auto Subsystem = GetSimplePhysicsSolver())
+	{
+		return Subsystem->IsSimulating(this);
+	}
+
+	return false;
 }
 
 float USimplePhysicsRigidBodyComponent::GetGravityZ() const
@@ -182,135 +225,145 @@ float USimplePhysicsRigidBodyComponent::GetGravityZ() const
 	return bUseGravity ? GravityAcceleration * GravityScale : 0.f;
 }
 
-EHandleBlockingHitResult USimplePhysicsRigidBodyComponent::HandleBlockingHit(const FHitResult& Hit, float TimeTick, const FVector& MoveDelta, float& SubTickTimeRemaining)
+void USimplePhysicsRigidBodyComponent::SetLastBlockingHitResult(const FHitResult& Hit)
 {
-	AActor* ActorOwner = UpdatedComponent ? UpdatedComponent->GetOwner() : nullptr;
-	if (!IsValid(ActorOwner))
-	{
-		return EHandleBlockingHitResult::Abort;
-	}
-
-	HandleImpact(Hit, TimeTick, MoveDelta);
-
-	if (!IsValid(ActorOwner))
-	{
-		return EHandleBlockingHitResult::Abort;
-	}
-
-	if (Hit.bStartPenetrating)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Asteroid %s is stuck inside %s.%s with velocity %s!"), *GetNameSafe(ActorOwner), *Hit.HitObjectHandle.GetName(), *GetNameSafe(Hit.GetComponent()), *Velocity.ToString());
-		return EHandleBlockingHitResult::Abort;
-	}
-
-	SubTickTimeRemaining = TimeTick * (1.f - Hit.Time);
-	return EHandleBlockingHitResult::Deflect;
+	LastHitResult = Hit;
 }
 
-
-void USimplePhysicsRigidBodyComponent::HandleImpact(const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta)
+void USimplePhysicsRigidBodyComponent::ClearLastBlockingHitResult()
 {
-	const FVector NormalT = ConstrainNormalToPlane(FVector(-1.f, 0.f, 0.f));
-	UE_LOG(LogTemp, Warning, TEXT("Test Normal: %s"), *NormalT.ToString());
-
-	bool bStopSimulating = false;
-
-	//const FVector OldVelocity = Velocity;
-	//Velocity = ComputeBounceResult(Hit, TimeSlice, MoveDelta);
-
-	//// Broadcast Event here
-
-	//// Event may cause properties to change, ensure velocity is within valid range
-	//Velocity = LimitVelocityFromCurrent();
-
-
-
-	if (true /*bShouldBounce*/)
-	{
-		const FVector OldVelocity = Velocity;
-		Velocity = ComputeBounceResult(Hit, TimeSlice, MoveDelta);
-
-		// Trigger bounce events
-		//OnProjectileBounce.Broadcast(Hit, OldVelocity);
-
-		// Event may modify velocity or threshold, so check velocity threshold now.
-		Velocity = LimitVelocity(Velocity);
-		/*if (IsVelocityUnderSimulationThreshold())
-		{
-			bStopSimulating = true;
-		}*/
-	}
-	else
-	{
-		bStopSimulating = true;
-	}
-
-
-	if (bStopSimulating)
-	{
-		SetSimulationEnabled(false);
-	}
+	LastHitResult.Init();
 }
 
+//EHandleBlockingHitResult USimplePhysicsRigidBodyComponent::HandleBlockingHit(const FHitResult& Hit, float TimeTick, const FVector& MoveDelta, float& SubTickTimeRemaining)
+//{
+//	AActor* ActorOwner = UpdatedComponent ? UpdatedComponent->GetOwner() : nullptr;
+//	if (!IsValid(ActorOwner))
+//	{
+//		return EHandleBlockingHitResult::Abort;
+//	}
+//
+//	HandleImpact(Hit, TimeTick, MoveDelta);
+//
+//	if (!IsValid(ActorOwner))
+//	{
+//		return EHandleBlockingHitResult::Abort;
+//	}
+//
+//	if (Hit.bStartPenetrating)
+//	{
+//		UE_LOG(LogTemp, Warning, TEXT("Asteroid %s is stuck inside %s.%s with velocity %s!"), *GetNameSafe(ActorOwner), *Hit.HitObjectHandle.GetName(), *GetNameSafe(Hit.GetComponent()), *Velocity.ToString());
+//		return EHandleBlockingHitResult::Abort;
+//	}
+//
+//	SubTickTimeRemaining = TimeTick * (1.f - Hit.Time);
+//	return EHandleBlockingHitResult::Deflect;
+//}
+
+
+//void USimplePhysicsRigidBodyComponent::HandleImpact(const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta)
+//{
+//	const FVector NormalT = ConstrainNormalToPlane(FVector(-1.f, 0.f, 0.f));
+//	UE_LOG(LogTemp, Warning, TEXT("Test Normal: %s"), *NormalT.ToString());
+//
+//	bool bStopSimulating = false;
+//
+//	//const FVector OldVelocity = Velocity;
+//	//Velocity = ComputeBounceResult(Hit, TimeSlice, MoveDelta);
+//
+//	//// Broadcast Event here
+//
+//	//// Event may cause properties to change, ensure velocity is within valid range
+//	//Velocity = LimitVelocityFromCurrent();
+//
+//
+//
+//	if (true /*bShouldBounce*/)
+//	{
+//		const FVector OldVelocity = Velocity;
+//		Velocity = ComputeBounceResult(Hit, TimeSlice, MoveDelta);
+//
+//		// Trigger bounce events
+//		//OnProjectileBounce.Broadcast(Hit, OldVelocity);
+//
+//		// Event may modify velocity or threshold, so check velocity threshold now.
+//		Velocity = LimitVelocity(Velocity);
+//		/*if (IsVelocityUnderSimulationThreshold())
+//		{
+//			bStopSimulating = true;
+//		}*/
+//	}
+//	else
+//	{
+//		bStopSimulating = true;
+//	}
+//
+//
+//	if (bStopSimulating)
+//	{
+//		SetSimulationEnabled(false);
+//	}
+//}
 
 
 
-FVector USimplePhysicsRigidBodyComponent::ComputeBounceResult(const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta)
-{
-	//// Check if we hit an asteroid
-	//if (ASAsteroid* HitAsteroid = Cast<ASAsteroid>(Hit.GetActor()))
-	//{
-	//	// If we hit an asteroid then the other asteroid may have already computed our resulting velocity
-	//	if (CollisionResultMap.Contains(MovementComp))
-	//	{
-	//		const FVector V1Final = CollisionResultMap[MovementComp];
-	//		UE_LOG(LogTemp, Warning, TEXT("I hit an asteroid, has entry in map, V1:%s"), *V1Final.ToString());
-	//		return V1Final;
-	//	}
 
-	//	if (USAsteroidMovementComponent* OtherMovementComp = HitAsteroid->GetComponentByClass<USAsteroidMovementComponent>())
-	//	{
-	//		FVector V1Final;
-	//		FVector V2Final;
-	//		ComputeAsteroidCollisionVelocities(MovementComp, OtherMovementComp, V1Final, V2Final);
-	//		CollisionResultMap.Emplace(MovementComp, V1Final);
-	//		CollisionResultMap.Emplace(OtherMovementComp, V2Final);
-
-
-	//		UE_LOG(LogTemp, Warning, TEXT("I hit an asteroid, no entry in map, V1:%s, V2:%s"), *V1Final.ToString(), *V2Final.ToString());
-
-
-	//		OtherMovementComp->Velocity = V2Final;
-	//		OtherMovementComp->UpdateComponentVelocity();
-
-	//		return V1Final;
-	//	}
-	//}
-
-
-	FVector TempVelocity = Velocity;
-	const FVector Normal = ConstrainNormalToPlane(Hit.Normal);
-	const float VDotNormal = (TempVelocity | Normal);
-
-	// Only if velocity is opposed by normal or parallel
-	if (VDotNormal <= 0.f)
-	{
-		// Project velocity onto normal in reflected direction.
-		const FVector ProjectedNormal = Normal * -VDotNormal;
-
-		// Point velocity in direction parallel to surface
-		TempVelocity += ProjectedNormal;
-
-		// Only tangential velocity should be affected by friction.
-		//const float ScaledFriction = (bBounceAngleAffectsFriction || bIsSliding) ? FMath::Clamp(-VDotNormal / TempVelocity.Size(), MinFrictionFraction, 1.f) * Friction : Friction;
-		//TempVelocity *= FMath::Clamp(1.f - /*(ScaledFriction*/, 0.f, 1.f);
-
-		// Coefficient of restitution only applies perpendicular to impact.
-		TempVelocity += (ProjectedNormal * FMath::Max(/* Bounciness*/ 1.f, 0.f));
-
-		// Bounciness could cause us to exceed max speed.
-		TempVelocity = LimitVelocity(TempVelocity);
-	}
-
-	return TempVelocity;
-}
+//FVector USimplePhysicsRigidBodyComponent::ComputeBounceResult(const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta)
+//{
+//	//// Check if we hit an asteroid
+//	//if (ASAsteroid* HitAsteroid = Cast<ASAsteroid>(Hit.GetActor()))
+//	//{
+//	//	// If we hit an asteroid then the other asteroid may have already computed our resulting velocity
+//	//	if (CollisionResultMap.Contains(MovementComp))
+//	//	{
+//	//		const FVector V1Final = CollisionResultMap[MovementComp];
+//	//		UE_LOG(LogTemp, Warning, TEXT("I hit an asteroid, has entry in map, V1:%s"), *V1Final.ToString());
+//	//		return V1Final;
+//	//	}
+//
+//	//	if (USAsteroidMovementComponent* OtherMovementComp = HitAsteroid->GetComponentByClass<USAsteroidMovementComponent>())
+//	//	{
+//	//		FVector V1Final;
+//	//		FVector V2Final;
+//	//		ComputeAsteroidCollisionVelocities(MovementComp, OtherMovementComp, V1Final, V2Final);
+//	//		CollisionResultMap.Emplace(MovementComp, V1Final);
+//	//		CollisionResultMap.Emplace(OtherMovementComp, V2Final);
+//
+//
+//	//		UE_LOG(LogTemp, Warning, TEXT("I hit an asteroid, no entry in map, V1:%s, V2:%s"), *V1Final.ToString(), *V2Final.ToString());
+//
+//
+//	//		OtherMovementComp->Velocity = V2Final;
+//	//		OtherMovementComp->UpdateComponentVelocity();
+//
+//	//		return V1Final;
+//	//	}
+//	//}
+//
+//
+//	FVector TempVelocity = Velocity;
+//	const FVector Normal = ConstrainNormalToPlane(Hit.Normal);
+//	const float VDotNormal = (TempVelocity | Normal);
+//
+//	// Only if velocity is opposed by normal or parallel
+//	if (VDotNormal <= 0.f)
+//	{
+//		// Project velocity onto normal in reflected direction.
+//		const FVector ProjectedNormal = Normal * -VDotNormal;
+//
+//		// Point velocity in direction parallel to surface
+//		TempVelocity += ProjectedNormal;
+//
+//		// Only tangential velocity should be affected by friction.
+//		//const float ScaledFriction = (bBounceAngleAffectsFriction || bIsSliding) ? FMath::Clamp(-VDotNormal / TempVelocity.Size(), MinFrictionFraction, 1.f) * Friction : Friction;
+//		//TempVelocity *= FMath::Clamp(1.f - /*(ScaledFriction*/, 0.f, 1.f);
+//
+//		// Coefficient of restitution only applies perpendicular to impact.
+//		TempVelocity += (ProjectedNormal * FMath::Max(/* Bounciness*/ 1.f, 0.f));
+//
+//		// Bounciness could cause us to exceed max speed.
+//		TempVelocity = LimitVelocity(TempVelocity);
+//	}
+//
+//	return TempVelocity;
+//}

@@ -23,29 +23,38 @@ public:
 	/** Called once all UWorldSubsystems have been initialized */
 	virtual void PostInitialize() override;
 
-	/* Enable/Disable the simulate for an actor with attached USimplePhysicsRigidBodyComponent */
+	/* Enable/Disable simulation for an actor with attached USimplePhysicsRigidBodyComponent */
 	void SetSimulationEnabled(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, bool Enabled);
 
+	/* Enable/Disable simulation for an actor. Will only simulate if actor has a USimplePhysicsRigidBodyComponent */
 	UFUNCTION(BlueprintCallable)
 	void SetSimulationEnabled(AActor* Actor, bool Enabled);
 
-	
+	UFUNCTION(BlueprintCallable)
+	bool IsSimulating(const USimplePhysicsRigidBodyComponent* RigidBody) const;
+
 	/** Begin UTickableWorldSubsystem Interface */
 	virtual bool IsTickable() const override;
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override { RETURN_QUICK_DECLARE_CYCLE_STAT(FSimplePhysicsSolverStat, STATGROUP_Tickables); }
 	/** End UTickableWorldSubsystem Interface */
 
-	
+protected:
 
-	bool HandleImpact(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta);
+	/** Applies deflection logic from colliding with a non Simple Physics Rigid Body actor. Will trigger RigidBodies OnRigidBodyBounce event. */
+	virtual void HandleImpact(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta);
 
-	void HandleRigidBodyCollision(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, TObjectPtr<USimplePhysicsRigidBodyComponent> OtherRigidBody);
+	/** Apply collision logic from two Simple Physics Rigidbodies collide with each other.  */
+	virtual void HandleRigidBodyCollision(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, TObjectPtr<USimplePhysicsRigidBodyComponent> OtherRigidBody, const FHitResult& Hit);
 
+	/** Compute the resulting velocities of two Simple Physics Rigidbodies collide with each other.  */
+	virtual bool ComputeRigidBodyCollision(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody1, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody2, FVector& Velocity1, FVector& Velocity2) const;
 
-	bool ComputeRigidBodyCollision(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody1, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody2, FVector& V1, FVector& V2) const;
+	/** Computes the result of RigidBody bouncing off a non Simple Physics Rigid Body actor */
+	virtual FVector ComputeBounceResult(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta);
 
-	float GetBounceFactor(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody1, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody2) const;
+	/** Return true if RigidBody is able to simulate this frame */
+	virtual bool CanSimulateRigidBodyMovement(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, float DeltaTime) const;
 
 private:
 
@@ -62,19 +71,20 @@ private:
 	int32 MaxSimulationIterations;
 	float MinimumSimulationVelocity;
 
-
 	void ValidateRigidBodyTick(float DeltaTime);
-	bool TickRigidBody(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, float DeltaTime);
+	/*bool TickRigidBody(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, float DeltaTime);*/
 	void ApplyRigidBodyMovement(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, float DeltaTime);
 
-	FVector ComputeBounceResult(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta);
-
+	/** Return true if RigidBody velocity is below the velocity set in SimplePhysics_Settings */
 	bool IsBelowSimulationVelocity(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody) const;
 
+	/** Stop simulating RigidBody will broadcast */
 	void StopSimulating(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody);
 
+	/** Register all AddRigidBodies by adding them to SimulatedRigidBodies. Ensure all InvalidRigidBodies are removed from SimulatedRigidBodies */
 	void RegisterRigidBodies();
 
+	/** Map of new velocities calcuated this frame of rigid bodies colliding with each other */
 	UPROPERTY()
 	TMap<USimplePhysicsRigidBodyComponent*, FVector> RigidCollisionResultMap;
 
