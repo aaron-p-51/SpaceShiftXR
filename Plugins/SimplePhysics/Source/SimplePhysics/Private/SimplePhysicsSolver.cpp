@@ -44,18 +44,18 @@ void USimplePhysicsSolver::SetSimulationEnabled(TObjectPtr<USimplePhysicsRigidBo
 {
 	if (Enabled)
 	{
-		SimulatedRigidBodies.AddUnique(RigidBody);
+		AddRigidBodies.AddUnique(RigidBody);
 	}
 	else
 	{
-		SimulatedRigidBodies.Remove(RigidBody);
+		InvalidRigidBodies.AddUnique(RigidBody);
 	}
 }
 
 
 bool USimplePhysicsSolver::IsTickable() const
 {
-	return SimulatedRigidBodies.Num() > 0;
+	return SimulatedRigidBodies.Num() > 0 || AddRigidBodies.Num() > 0 || InvalidRigidBodies.Num() > 0;
 }
 
 
@@ -63,8 +63,27 @@ void USimplePhysicsSolver::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	RegisterRigidBodies();
+
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_SimplePhysicsSolver_TickComponent);
 	ValidateRigidBodyTick(DeltaTime);
+}
+
+
+void USimplePhysicsSolver::RegisterRigidBodies()
+{
+	for (auto RigidBody : AddRigidBodies)
+	{
+		SimulatedRigidBodies.AddUnique(RigidBody);
+	}
+
+	for (auto RigidBody : InvalidRigidBodies)
+	{
+		SimulatedRigidBodies.Remove(RigidBody);
+	}
+
+	AddRigidBodies.Empty();
+	InvalidRigidBodies.Empty();
 }
 
 
@@ -84,17 +103,11 @@ void USimplePhysicsSolver::ValidateRigidBodyTick(float DeltaTime)
 		}
 
 		const bool ValidTick = TickRigidBody(RigidBody, DeltaTime);
-		UE_LOG(LogTemp, Warning, TEXT("Velocity:%f"), RigidBody->Velocity.Length());
+		
 		if (!ValidTick)
 		{
 			InvalidRigidBodies.Add(RigidBody);
 		}
-	}
-
-	// Test removal from low speed
-	for (auto& RigidBody : InvalidRigidBodies)
-	{
-		SimulatedRigidBodies.Remove(RigidBody);
 	}
 }
 
@@ -169,7 +182,8 @@ void USimplePhysicsSolver::ApplyRigidBodyMovement(TObjectPtr<USimplePhysicsRigid
 		{
 			if (RigidBody->Velocity == OldVelocity)
 			{
-				RigidBody->Velocity = (Hit.Time > UE_KINDA_SMALL_NUMBER) ? RigidBody->ComputeVelocity(OldVelocity, TimeTick * Hit.Time) : OldVelocity;
+				const FVector NewVelocity = RigidBody->ComputeVelocity(OldVelocity, TimeTick * Hit.Time);
+				RigidBody->Velocity = (Hit.Time > UE_KINDA_SMALL_NUMBER) ? NewVelocity : OldVelocity;
 			}
 
 			NumImpacts++;
@@ -292,6 +306,8 @@ void USimplePhysicsSolver::StopSimulating(TObjectPtr<USimplePhysicsRigidBodyComp
 }
 
 
+
+
 bool USimplePhysicsSolver::ShouldAbort(USimplePhysicsRigidBodyComponent* RigidBody, const FHitResult& Hit) const
 {
 	if (!IsValid(RigidBody))
@@ -347,6 +363,12 @@ void USimplePhysicsSolver::HandleRigidBodyCollision(TObjectPtr<USimplePhysicsRig
 			RigidCollisionResultMap.Emplace(OtherRigidBody, V2Final);
 
 			RigidBody->SetVelocity(V1Final);
+
+			if (OtherRigidBody->bEnableSimulationOnRigidBodyCollision)
+			{
+				OtherRigidBody->SetVelocity(V2Final);
+				OtherRigidBody->SetSimulationEnabled(true);
+			}
 		}
 	}
 }

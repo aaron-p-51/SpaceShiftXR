@@ -52,6 +52,9 @@ private:
 	/** Current RigidBodies being simulated each frame */
 	TArray<TObjectPtr<USimplePhysicsRigidBodyComponent>> SimulatedRigidBodies;
 
+	/** RigidBodies to add to SimulatedRigidBodies, will be added at before SimulatedRigidBodies are updated the next frame */
+	TArray<TObjectPtr<USimplePhysicsRigidBodyComponent>> AddRigidBodies;
+
 	/** RigidBodies found to be invalid this frame. USimplePhysicsRigidBodyComponents in this arrya will be removed from SimulatedRigidBodies at the end of frame */
 	TArray<TObjectPtr<USimplePhysicsRigidBodyComponent>> InvalidRigidBodies;
 
@@ -70,6 +73,7 @@ private:
 
 	void StopSimulating(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody);
 
+	void RegisterRigidBodies();
 
 	UPROPERTY()
 	TMap<USimplePhysicsRigidBodyComponent*, FVector> RigidCollisionResultMap;

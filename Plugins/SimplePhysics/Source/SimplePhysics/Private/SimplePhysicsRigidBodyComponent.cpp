@@ -41,7 +41,8 @@ USimplePhysicsSolver* USimplePhysicsRigidBodyComponent::GetSimplePhysicsSolver()
 
 void USimplePhysicsRigidBodyComponent::SetSimulationEnabled(bool Enabled)
 {
-	if (!IsValid(UpdatedComponent) || bSimulationEnabled == Enabled)
+	
+	if (!IsValid(UpdatedComponent))
 	{
 		return;
 	}

@@ -32,6 +32,9 @@ public:
 	bool bUseGravity;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bEnableSimulationOnRigidBodyCollision;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Mass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
