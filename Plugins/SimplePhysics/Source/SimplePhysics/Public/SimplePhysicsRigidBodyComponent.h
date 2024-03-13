@@ -8,6 +8,7 @@
 #include "SimplePhysicsRigidBodyComponent.generated.h"
 
 class USimplePhysicsSolver;
+class USphereComponent;
 
 /**
  * 
@@ -67,6 +68,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float LinearDamping;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AngularDamping;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float MomentOfInertia;
+
 	/** Max Speed if this RigidBody. Set to 0 for no max speed limit */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float MaxSpeed;
@@ -81,6 +88,12 @@ public:
 	/** Custom gravity scale for this rigid body. Set to 0 for no gravity. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Projectile)
 	float GravityScale;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FRotator AngularVelocity;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float TempScale;
 
 	/** Get a pointer to the SimplePhysicsSolver Subsystem */
 	USimplePhysicsSolver* GetSimplePhysicsSolver() const;
@@ -150,6 +163,12 @@ public:
 
 	const FHitResult& GetLastHitResult() const { return LastHitResult; }
 
+	const USphereComponent* GetSphereComponent() const { return OwnerSphereComponent; }
+
+	float GetScaledSphereRadius() const;
+
+
+
 protected:
 
 	/*UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
@@ -163,6 +182,10 @@ protected:
 
 	/** Values loaded from SimplePhysics_Settings */
 	float GravityAcceleration;
+
+	USphereComponent* OwnerSphereComponent;
+
+
 
 
 	

@@ -5,6 +5,7 @@
 
 #include "SimplePhysics_Settings.h"
 #include "SimplePhysicsSolver.h"
+#include "Components/SphereComponent.h"
 
 USimplePhysicsRigidBodyComponent::USimplePhysicsRigidBodyComponent()
 {
@@ -17,6 +18,7 @@ USimplePhysicsRigidBodyComponent::USimplePhysicsRigidBodyComponent()
 	LinearDamping = 0.f;
 	MaxSpeed = 1000.f;
 	GravityScale = 1.f;
+	MomentOfInertia = 1.f;
 
 
 
@@ -26,6 +28,18 @@ USimplePhysicsRigidBodyComponent::USimplePhysicsRigidBodyComponent()
 	LastHitResult.Init();
 }
 
+
+float USimplePhysicsRigidBodyComponent::GetScaledSphereRadius() const
+{
+	if (OwnerSphereComponent)
+	{
+		return OwnerSphereComponent->GetScaledSphereRadius();
+	}
+
+	return 0.f;
+}
+
+
 void USimplePhysicsRigidBodyComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
@@ -33,7 +47,11 @@ void USimplePhysicsRigidBodyComponent::InitializeComponent()
 	if (USimplePhysics_Settings* SimplePhysicsSettings = GetMutableDefault<USimplePhysics_Settings>())
 	{
 		GravityAcceleration = SimplePhysicsSettings->GravityAcceleration;
-		
+	}
+
+	if (IsValid(UpdatedComponent))
+	{
+		OwnerSphereComponent = Cast<USphereComponent>(UpdatedComponent);
 	}
 }
 
@@ -91,8 +109,6 @@ FVector USimplePhysicsRigidBodyComponent::ComputeMoveDelta(const FVector& InVelo
 }
 
 
-
-
 FVector USimplePhysicsRigidBodyComponent::ComputeVelocity(const FVector& InitialVelocity, float DeltaTime) const
 {
 	// v = v0 + a*t
@@ -112,6 +128,7 @@ void USimplePhysicsRigidBodyComponent::SetVelocity(const FVector& NewVelocity, b
 		UpdateComponentVelocity();
 	}
 }
+
 
 float USimplePhysicsRigidBodyComponent::GetRestitutionCoefficient(TObjectPtr<USimplePhysicsRigidBodyComponent> OtherRidigBody) const
 {

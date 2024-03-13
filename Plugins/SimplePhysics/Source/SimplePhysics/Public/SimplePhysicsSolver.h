@@ -48,7 +48,7 @@ protected:
 	virtual void HandleRigidBodyCollision(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, TObjectPtr<USimplePhysicsRigidBodyComponent> OtherRigidBody, const FHitResult& Hit);
 
 	/** Compute the resulting velocities of two Simple Physics Rigidbodies collide with each other.  */
-	virtual bool ComputeRigidBodyCollision(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody1, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody2, FVector& Velocity1, FVector& Velocity2) const;
+	virtual bool ComputeRigidBodyCollision(const FHitResult& Hit, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody1, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody2, FVector& Velocity1, FVector& Velocity2, FRotator& AngularVelocity1, FRotator& AngularVelocity2) const;
 
 	/** Computes the result of RigidBody bouncing off a non Simple Physics Rigid Body actor */
 	virtual FVector ComputeBounceResult(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta);
