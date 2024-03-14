@@ -146,35 +146,40 @@ void USimplePhysicsSolver::ApplyRigidBodyMovement(TObjectPtr<USimplePhysicsRigid
 	FHitResult Hit(1.f);
 	
 
-	FVector DeltaRotation = (RigidBody->AngularVelocity * DeltaTime);
-	if (AActor* Owner = RigidBody->GetOwner())
-	{
-		//FQuat CurrentRotation = Owner->GetActorQuat();
-		//FQuat DeltaQuat = FQuat(DeltaRotation.GetSafeNormal(), DeltaRotation.Length());
-		//Owner->SetActorRotation(CurrentRotation * DeltaQuat);
+	const FVector AngularVelocityDelta = RigidBody->ComputeAngularVelocityDelta(RigidBody->AngularVelocity, DeltaTime);
+	UE_LOG(LogTemp, Warning, TEXT("AngularVelocityDelta: %s"), *AngularVelocityDelta.ToString());
+	RigidBody->ApplyRotationDelta(FRotator(AngularVelocityDelta.Y, AngularVelocityDelta.Z, AngularVelocityDelta.X));
+	//RigidBody->AddAngularVelocity(AngularVelocityDelta);
 
-
-		FRotator NewAngularVelocity;
-		NewAngularVelocity.Roll = DeltaRotation.X;
-		NewAngularVelocity.Pitch = DeltaRotation.Y;
-		NewAngularVelocity.Yaw = DeltaRotation.Z;
-		Owner->AddActorWorldRotation(NewAngularVelocity);
-		//FRotator DT = FRotator(RigidBody->AngularVelocity * DeltaTime);
-
-		//FRotator CurrentRotation = Owner->GetActorRotation();
-		//FRotator DeltaRotation = FRotator(RigidBody->AngularVelocity.X * DeltaTime,
-		//								  RigidBody->AngularVelocity.Z * DeltaTime,
-		//								  RigidBody->AngularVelocity.Y * DeltaTime
-		//								  
-		//									);
-
-		//Owner->SetActorRelativeRotation(CurrentRotation + DeltaRotation);
-	}
-
-	//if (auto Sphere = Cast<USphereComponent>(RigidBody->UpdatedComponent))
+	//FVector DeltaRotation = (RigidBody->AngularVelocity * DeltaTime);
+	//if (AActor* Owner = RigidBody->GetOwner())
 	//{
-	//	UE_LOG(LogTemp, Warning, TEXT("I have a sphere"));
+	//	//FQuat CurrentRotation = Owner->GetActorQuat();
+	//	//FQuat DeltaQuat = FQuat(DeltaRotation.GetSafeNormal(), DeltaRotation.Length());
+	//	//Owner->SetActorRotation(CurrentRotation * DeltaQuat);
+
+
+	//	FRotator NewAngularVelocity;
+	//	NewAngularVelocity.Roll = DeltaRotation.X;
+	//	NewAngularVelocity.Pitch = DeltaRotation.Y;
+	//	NewAngularVelocity.Yaw = DeltaRotation.Z;
+	//	Owner->AddActorWorldRotation(NewAngularVelocity);
+	//	//FRotator DT = FRotator(RigidBody->AngularVelocity * DeltaTime);
+
+	//	//FRotator CurrentRotation = Owner->GetActorRotation();
+	//	//FRotator DeltaRotation = FRotator(RigidBody->AngularVelocity.X * DeltaTime,
+	//	//								  RigidBody->AngularVelocity.Z * DeltaTime,
+	//	//								  RigidBody->AngularVelocity.Y * DeltaTime
+	//	//								  
+	//	//									);
+
+	//	//Owner->SetActorRelativeRotation(CurrentRotation + DeltaRotation);
 	//}
+
+	////if (auto Sphere = Cast<USphereComponent>(RigidBody->UpdatedComponent))
+	////{
+	////	UE_LOG(LogTemp, Warning, TEXT("I have a sphere"));
+	////}
 
 
 	while (RemainingTime >= MIN_TICK_TIME && (Iterations < MaxSimulationIterations) && RigidBody->UpdatedComponent && RigidBody->IsActive())
@@ -193,6 +198,7 @@ void USimplePhysicsSolver::ApplyRigidBodyMovement(TObjectPtr<USimplePhysicsRigid
 		// Initial move state
 		Hit.Time = 1.f;
 		const FVector OldVelocity = RigidBody->Velocity;
+		const FVector OldAngularVelocity = RigidBody->AngularVelocity;
 		const FVector MoveDelta = RigidBody->ComputeMoveDelta(OldVelocity, TimeTick);
 
 		// Handle Rotation here
@@ -207,15 +213,19 @@ void USimplePhysicsSolver::ApplyRigidBodyMovement(TObjectPtr<USimplePhysicsRigid
 
 		if (!Hit.bBlockingHit)
 		{
-			RigidBody->SetMovementVelocityFromNoHit(OldVelocity, TimeTick);
+			RigidBody->UpdateMovementVelocity(OldVelocity, TimeTick);
+			RigidBody->UpdateMovementAngularVelocity(OldAngularVelocity, TimeTick);
 		}
 		else
 		{
-			if (RigidBody->Velocity == OldVelocity)
-			{
-				const FVector NewVelocity = RigidBody->ComputeVelocity(OldVelocity, TimeTick * Hit.Time);
-				RigidBody->Velocity = (Hit.Time > UE_KINDA_SMALL_NUMBER) ? NewVelocity : OldVelocity;
-			}
+			// TODO: Update with new function SetMovementVelocityFromHit()
+			RigidBody->UpdateMovementVelocity(OldVelocity, Hit, TimeTick);
+			RigidBody->UpdateMovementAngularVelocity(OldAngularVelocity, Hit, TimeTick);
+			//if (RigidBody->Velocity == OldVelocity)
+			//{
+			//	const FVector NewVelocity = RigidBody->ComputeVelocity(OldVelocity, TimeTick * Hit.Time);
+			//	RigidBody->Velocity = (Hit.Time > UE_KINDA_SMALL_NUMBER) ? NewVelocity : OldVelocity;
+			//}
 
 			//NumImpacts++;
 			float SubTickTimeRemaining = TimeTick * (1.f - Hit.Time);

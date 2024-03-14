@@ -122,10 +122,24 @@ public:
 
 	float GetMaxAngularVelocity() const { return MaxAngularVelocity; }
 
-	void AddForce(const FVector& Force);
+	virtual void AddForce(const FVector& Force);
 	bool HasPendingForce() const { return PendingForce.SquaredLength() > 0.f; }
 	FVector GetPendingForce() const { return PendingForce; }
 	void ClearPendingForce() { PendingForce = FVector::ZeroVector; }
+
+	virtual void AddTorque(const FVector& Torque);
+	bool HasPendingTorque() const { return PendingTorque.SquaredLength() > 0.f; }
+	FVector GetPendingTorque() const { return PendingTorque; }
+	void ClearPendingTorque() { PendingTorque = FVector::ZeroVector; }
+
+
+	FVector ComputeAngularVelocityDelta(const FVector& InAngularVelocity, float DeltaTime) const;
+
+	FVector ComputeAngularVelocity(const FVector& InitialAngularVelocity, float DeltaTime) const;
+
+	FVector ComputeAngularAcceleration(const FVector& InitialAngularVelocity, float DeltaTime) const;
+
+	virtual FVector GetAngularDragTorque(const FVector& InAngularVelocity) const;
 
 	/** Get the linear drag force acting on the RigidBody given a velocity */
 	virtual FVector GetLinearDragForce(const FVector& InVelocity) const;
@@ -165,7 +179,24 @@ public:
 	/** Compute the acceleration that will be applied */
 	FVector ComputeAcceleration(const FVector& InitialVelocity, float DeltaTime) const;
 
-	void SetMovementVelocityFromNoHit(const FVector& OldVelocity, float DeltaTime);
+
+	/** Call after moving the updated component. Will change Velocity based on PendingForces, Gravity and LinearDamping  */
+	void UpdateMovementVelocity(const FVector& OldVelocity, float DeltaTime);
+
+	/**
+	 * Call after moving the updated component. Will change Velocity based on PendingForces, Gravity and LinearDamping.
+	 * If Hit is a blocking hit DeltaTime will be modified using Hit.Time.
+	 */
+	void UpdateMovementVelocity(const FVector& OldVelocity, const FHitResult& Hit, float DeltaTime);
+
+	/** Call after moving the updated component. Will change AngularVelocity based on PendingForces and AngularDamping.  */
+	void UpdateMovementAngularVelocity(const FVector& OldAngularVelocity, float DeltaTime);
+
+	/**
+     * Call after moving the updated component. Will change AngularVelocity based on PendingForces and AngularDamping.
+     * If Hit is a blocking hit DeltaTime will be modified using Hit.Time.
+     */
+	void UpdateMovementAngularVelocity(const FVector& OldAngularVelocity, const FHitResult& Hit, float DeltaTime);
 
 	/** Stop all movement by setting Velocity magnitide to 0 */
 	void StopAllMovementImmediately();
@@ -198,7 +229,10 @@ public:
 	void SetMomentOfInertia(float NewMomentOfInertia) { MomentOfInertia = NewMomentOfInertia; }
 	float GetMomentOfInertia() const;
 
+	void ApplyRotationDelta(const FRotator& RotationDelta);
 
+	void AddAngularVelocity(const FVector& AngularVelocityToAdd);
+	void AddVelocity(const FVector& VelocityToAdd);
 
 protected:
 
@@ -207,6 +241,9 @@ protected:
 
 	/** Accumulated Force to apply next movement update */
 	FVector PendingForce;
+
+	/** Accumulated Torque to apply next movement update */
+	FVector PendingTorque;
 
 	FHitResult LastHitResult;
 
