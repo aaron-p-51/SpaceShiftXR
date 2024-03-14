@@ -49,7 +49,7 @@ protected:
 	virtual void HandleRigidBodyCollision(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, TObjectPtr<USimplePhysicsRigidBodyComponent> OtherRigidBody, const FHitResult& Hit);
 
 	/** Compute the resulting velocities of two Simple Physics Rigidbodies collide with each other.  */
-	virtual bool ComputeRigidBodyCollision(const FHitResult& Hit, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody1, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody2, FVector& Velocity1, FVector& Velocity2, FRotator& AngularVelocity1, FRotator& AngularVelocity2) const;
+	virtual bool ComputeRigidBodyCollision(const FHitResult& Hit, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody1, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody2,	FMovementData& RigidBody1MovementData, FMovementData& RigidBody2MovementData) const;
 
 	/** Computes the result of RigidBody bouncing off a non Simple Physics Rigid Body actor */
 	virtual bool ComputeBounceResult(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta, FMovementData& ResultMovementData);
@@ -87,7 +87,7 @@ private:
 
 	/** Map of new velocities calcuated this frame of rigid bodies colliding with each other */
 	UPROPERTY()
-	TMap<USimplePhysicsRigidBodyComponent*, FVector> RigidCollisionResultMap;
+	TMap<USimplePhysicsRigidBodyComponent*, FMovementData> RigidCollisionResultMap;
 
 	/** Check if the Rigid body should abort its simulation this tick. */
 	bool ShouldAbort(USimplePhysicsRigidBodyComponent* RigidBody, const FHitResult& Hit) const;

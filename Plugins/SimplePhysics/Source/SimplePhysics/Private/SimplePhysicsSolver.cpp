@@ -145,7 +145,7 @@ void USimplePhysicsSolver::ApplyRigidBodyMovement(TObjectPtr<USimplePhysicsRigid
 	int32 Iterations = 0;
 	FHitResult Hit(1.f);
 	
-	//RigidBody->AngularVelocity -= RigidBody->AngularDamping * RigidBody->AngularVelocity * DeltaTime;
+
 	FVector DeltaRotation = (RigidBody->AngularVelocity * DeltaTime);
 	if (AActor* Owner = RigidBody->GetOwner())
 	{
@@ -319,20 +319,67 @@ bool USimplePhysicsSolver::ComputeBounceResult(TObjectPtr<USimplePhysicsRigidBod
 		// Bounciness could cause us to exceed max speed.
 		//TempVelocity = RigidBody->LimitVelocity(TempVelocity);
 
-		const FVector ImpactForce = Hit.ImpactNormal * RigidBody->Mass;
+		FVector RelativeVelocity = RigidBody->Velocity;
+
+		const float RelativeSpeedAlongNormal = VelocityDotNormal; //FVector::DotProduct(RelativeVelocity, Hit.Normal);
+		float ImpulseMagnitude = -(1.0f) * RelativeSpeedAlongNormal;
+		if (ImpulseMagnitude > 0.f)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Should Not Be here!!!"));
+			//ImpulseMagnitude = 0.f;
+		}
+
+		float DeltaAngularVelocityMagnitude = ImpulseMagnitude / RigidBody->GetMomentOfInertia();
+
+
+		const FVector CollisionPointRelativeToCenter = Hit.ImpactPoint - RigidBody->UpdatedComponent->GetComponentLocation();
+		FVector AxisOfRotation = FVector::CrossProduct(CollisionPointRelativeToCenter, Hit.Normal).GetSafeNormal();
+		UE_LOG(LogTemp, Warning, TEXT("Surface Normal: %s"), *Hit.Normal.ToString());
+		if (FMath::Abs(Hit.Normal.Z) < 0.9f)
+		{
+			AxisOfRotation *= -1.f;
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("AxisOfRotation: %s"), *AxisOfRotation.ToString());
+
+		const FVector DeltaAngularVelocity = AxisOfRotation * DeltaAngularVelocityMagnitude * RigidBody->TempScale;
+
+
+
+
+
+		/* Old working but have ot set moment of inertia
+		UE_LOG(LogTemp, Warning, TEXT("Normal: %s"), *Normal.ToString());
+
+		const float Mass = RigidBody->GetMass();
+		UE_LOG(LogTemp, Warning, TEXT("Mass: %f"), Mass);
+
+		const FVector ImpactForce = Normal * Mass;
+		UE_LOG(LogTemp, Warning, TEXT("ImpactForce: %s"), *ImpactForce.ToString());
+
 		const FVector ContactVector = (Hit.ImpactPoint - RigidBody->UpdatedComponent->GetComponentLocation());
+		UE_LOG(LogTemp, Warning, TEXT("ContactVector: %s"), *ContactVector.ToString());
 
 
 		const FVector Torque = (FMath::Abs(FVector::DotProduct(FVector::UpVector, Hit.Normal)) <= 0.1f) ? 
-			FVector::CrossProduct(ImpactForce, ContactVector).GetSafeNormal() : FVector::CrossProduct(ContactVector, ImpactForce).GetSafeNormal();
+			FVector::CrossProduct(ImpactForce, ContactVector) : FVector::CrossProduct(ContactVector, ImpactForce);
+
+		UE_LOG(LogTemp, Warning, TEXT("Torque: %s"), *Torque.ToString());
 
 
-		FVector DeltaAngularVelocity = Torque / RigidBody->MomentOfInertia;
+		const float MomnetOfInertia = RigidBody->GetMomentOfInertia();
+		UE_LOG(LogTemp, Warning, TEXT("MomnetOfInertia: %f"), MomnetOfInertia);
+
+		FVector DeltaAngularVelocity = (MomnetOfInertia > 0.f) ? (Torque / MomnetOfInertia) : FVector::UpVector;
+		UE_LOG(LogTemp, Warning, TEXT("DeltaAngularVelocity: %s"), *DeltaAngularVelocity.ToString());
+		//DeltaAngularVelocity = FVector::UpVector;
 		FVector NewAngularVelocity = DeltaAngularVelocity + RigidBody->AngularVelocity;
+		UE_LOG(LogTemp, Warning, TEXT("NewAngularVelocity: %s"), *NewAngularVelocity.ToString());
+		*/
 
-		UE_LOG(LogTemp, Warning, TEXT("AxisL%s"), *Torque.ToString());
+	
 
-		ResultMovementData.Set(TempVelocity, NewAngularVelocity);
+		ResultMovementData.Set(TempVelocity, DeltaAngularVelocity + RigidBody->AngularVelocity);
 	}
 
 	return true;
@@ -394,42 +441,37 @@ void USimplePhysicsSolver::HandleRigidBodyCollision(TObjectPtr<USimplePhysicsRig
 {
 	if (RigidCollisionResultMap.Contains(RigidBody))
 	{
-		RigidBody->SetVelocity(RigidCollisionResultMap[RigidBody]);
+		RigidBody->SetMovementData(RigidCollisionResultMap[RigidBody]);
 	}
 	else
 	{
 		const bool OtherRigidBodySimulating = SimulatedRigidBodies.Contains(OtherRigidBody);
 		if (OtherRigidBodySimulating || OtherRigidBody->bEnableSimulationOnRigidBodyCollision)
 		{
-			FVector V1Final, V2Final;
-			FRotator AV1Final, AV2Final;
-			if (ComputeRigidBodyCollision(Hit, RigidBody, OtherRigidBody, V1Final, V2Final, AV1Final, AV2Final))
+			FMovementData RigidBodyMovementData, OtherRigidBodyMovementData;
+			if (ComputeRigidBodyCollision(Hit, RigidBody, OtherRigidBody, RigidBodyMovementData, OtherRigidBodyMovementData))
 			{
-				RigidCollisionResultMap.Emplace(RigidBody, V1Final);
-				RigidCollisionResultMap.Emplace(OtherRigidBody, V2Final);
+				RigidCollisionResultMap.Emplace(RigidBody, RigidBodyMovementData);
+				RigidCollisionResultMap.Emplace(OtherRigidBody, OtherRigidBodyMovementData);
 
-				RigidBody->SetVelocity(V1Final);
-				OtherRigidBody->SetVelocity(V2Final);
-
-				//RigidBody->AngularVelocity = AV1Final;
-				//OtherRigidBody->AngularVelocity = AV2Final;
-
+				RigidBody->SetMovementData(RigidBodyMovementData);
+				OtherRigidBody->SetMovementData(OtherRigidBodyMovementData);
 
 				if (!OtherRigidBodySimulating)
 				{
 					OtherRigidBody->SetSimulationEnabled(true);
 				}
+
+				return;
 			}
 		}
-		else
-		{
-			HandleImpact(RigidBody, Hit, 0.f, FVector());
-		}
+
+		HandleImpact(RigidBody, Hit, 0.f, FVector());
 	}
 }
 
 
-bool USimplePhysicsSolver::ComputeRigidBodyCollision(const FHitResult& Hit, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody1, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody2, FVector& Velocity1, FVector& Velocity2, FRotator& AngularVelocity1, FRotator& AngularVelocity2) const
+bool USimplePhysicsSolver::ComputeRigidBodyCollision(const FHitResult& Hit, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody1, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody2, FMovementData& RigidBody1MovementData, FMovementData& RigidBody2MovementData) const
 {
 	//DrawDebugSphere(GetWorld(), Hit.ImpactPoint, 10, 26, FColor(181, 0, 0), true, -1, 0, 2);
 
@@ -438,28 +480,32 @@ bool USimplePhysicsSolver::ComputeRigidBodyCollision(const FHitResult& Hit, TObj
 		return false;
 	}
 
-	const float Mass1 = RigidBody1->Mass;
-	const float Mass2 = RigidBody2->Mass;
+	const float Mass1 = RigidBody1->GetMass();
+	const float Mass2 = RigidBody2->GetMass();
 
 	check(Mass1 > 0.f && Mass2 > 0.f);
 
-	Velocity1 = RigidBody1->Velocity;
-	Velocity2 = RigidBody2->Velocity;
+	FVector TempVelocity1 = RigidBody1->Velocity;
+	FVector TempVelocity2 = RigidBody2->Velocity;
 
 	// Calculate relative velocity
-	const FVector RelativeVelocity = Velocity2 - Velocity1;
+	const FVector RelativeVelocity = TempVelocity2 - TempVelocity1;
 
 	// Calculate collision normal
 	const FVector CollisionNormal = (RigidBody2->UpdatedComponent->GetComponentLocation() - RigidBody1->UpdatedComponent->GetComponentLocation()).GetSafeNormal();
 
 	// Calculate impulse along the normal
-	float Impulse = (2.0f * Mass1 * Mass2) / (Mass1 + Mass2) * FVector::DotProduct(RelativeVelocity, CollisionNormal);
+	float Impulse =	(2.0f * Mass1 * Mass2) / (Mass1 + Mass2) * FVector::DotProduct(RelativeVelocity, CollisionNormal);
+
 
 	// Update velocities
 	const float V1RestitutionCoefficient = RigidBody1->GetRestitutionCoefficient(RigidBody2);//		GetRestitutionCoefficient(RigidBody1, RigidBody2);
 	const float V2RestitutionCoefficient = RigidBody2->GetRestitutionCoefficient(RigidBody1);
-	Velocity1 += (V1RestitutionCoefficient * Impulse / Mass1) * CollisionNormal;
-	Velocity2 -= (V2RestitutionCoefficient * Impulse / Mass2) * CollisionNormal;
+	TempVelocity1 += (V1RestitutionCoefficient * Impulse / Mass1) * CollisionNormal;
+	//TempVelocity1 += ImpulseA * CollisionNormal / Mass1;
+	TempVelocity2 -= (V2RestitutionCoefficient * Impulse / Mass2) * CollisionNormal;
+
+
 
 	USphereComponent* RigidBody1SphereComponent = Cast<USphereComponent>(RigidBody1->UpdatedComponent);
 	USphereComponent* RigidBody2SphereComponent = Cast<USphereComponent>(RigidBody2->UpdatedComponent);
@@ -473,45 +519,19 @@ bool USimplePhysicsSolver::ComputeRigidBodyCollision(const FHitResult& Hit, TObj
 	const FVector LeverArm1 = Hit.ImpactPoint - RigidBody1SphereComponent->GetComponentLocation();
 	const FVector LeverArm2 = Hit.ImpactPoint - RigidBody2SphereComponent->GetComponentLocation();
 
-	FVector AngularDirection1 = FVector::CrossProduct(LeverArm1, CollisionNormal).GetSafeNormal();
-	FVector AngularDirection2 = FVector::CrossProduct(LeverArm2, CollisionNormal).GetSafeNormal();
+	const FVector AngularDirection1 = -FVector::CrossProduct(LeverArm1, CollisionNormal).GetSafeNormal();
+	const FVector AngularDirection2 = FVector::CrossProduct(LeverArm2, CollisionNormal).GetSafeNormal();
 
-	float AngularImpulseMagnitude1 = FVector::DotProduct(LeverArm1, Impulse * CollisionNormal) / RigidBody1->MomentOfInertia;
-	float AngularImpulseMagnitude2 = FVector::DotProduct(LeverArm2, Impulse * CollisionNormal);
+	float AngularImpulseMagnitude1 = FVector::DotProduct(LeverArm1, CollisionNormal) / RigidBody1->GetMomentOfInertia();
+	float AngularImpulseMagnitude2 = FVector::DotProduct(LeverArm2, CollisionNormal) / RigidBody2->GetMomentOfInertia();
+	UE_LOG(LogTemp, Warning, TEXT("AngularImpulseMagnitude1: %f"), AngularImpulseMagnitude1);
 
-	
+	FVector AngularVelocity1 = RigidBody1->AngularVelocity + (AngularImpulseMagnitude1 * AngularDirection1);
+	FVector AngularVelocity2 = RigidBody2->AngularVelocity + (AngularImpulseMagnitude2 * AngularDirection2);
 
-	//FVector AV1 = FVector(RigidBody1->AngularVelocity.Roll, RigidBody1->AngularVelocity.Pitch, RigidBody1->AngularVelocity.Yaw);
-	//AV1 += (AngularImpulseMagnitude1 / Mass1) * AngularDirection1;
-
-
-
-
+	RigidBody1MovementData.Set(TempVelocity1, AngularVelocity1);
+	RigidBody2MovementData.Set(TempVelocity2, AngularVelocity2);
 
 
-
-
-
-
-	/*const FVector Radius1 = RigidBody1SphereComponent->GetScaledSphereRadius() * CollisionNormal;
-	const FVector Radius2 = RigidBody2SphereComponent->GetScaledSphereRadius() * CollisionNormal;*/
-
-	//const FVector AngularImpulse = FVector::CrossProduct(CollisionNormal, Impulse * CollisionNormal);
-
-	//UE_LOG(LogTemp, Warning, TEXT("AngularImpulse:%s"), *AngularImpulse.ToString());
-
-	//FVector AV1 = FVector(RigidBody1->AngularVelocity.Roll, RigidBody1->AngularVelocity.Pitch, RigidBody1->AngularVelocity.Yaw);
-
-	////AngularVelocity1 = (RigidBody1->AngularVelocity.Vector() + (AngularImpulse / RigidBody1->MomentOfInertia)).Rotation();
-	//AV1 += AngularImpulse / RigidBody1->MomentOfInertia;
-	/*AngularVelocity1.Roll = AV1.X;
-	AngularVelocity1.Pitch = AV1.Y;
-	AngularVelocity1.Yaw = AV1.Z;*/
-
-
-	//AngularVelocity2 = (RigidBody2->AngularVelocity.Vector() - (AngularImpulse / RigidBody2->MomentOfInertia)).Rotation();
-
-	UE_LOG(LogTemp, Warning, TEXT("AV1:%s, AV2:%s"), *AngularVelocity1.ToString(), *AngularVelocity2.ToString());
-	
 	return true;
 }

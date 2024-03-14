@@ -64,8 +64,6 @@ struct FMovementData
 		const FRotator Rotator = Quat.Rotator();
 		return FVector(Rotator.Roll, Rotator.Pitch, Rotator.Yaw);
 	}
-
-
 };
 
 

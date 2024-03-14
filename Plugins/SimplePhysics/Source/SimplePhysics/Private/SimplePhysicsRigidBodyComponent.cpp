@@ -19,7 +19,7 @@ USimplePhysicsRigidBodyComponent::USimplePhysicsRigidBodyComponent()
 	MaxSpeed = 1000.f;
 	GravityScale = 1.f;
 	MomentOfInertia = 1.f;
-
+	CalculatedMomentOfInertia = 0.1f;
 
 
 	/*PreviousHitTime = 1.f;
@@ -36,7 +36,28 @@ float USimplePhysicsRigidBodyComponent::GetScaledSphereRadius() const
 		return OwnerSphereComponent->GetScaledSphereRadius();
 	}
 
+	UE_LOG(LogTemp, Warning, TEXT("I am here !!!!!"));
 	return 0.f;
+}
+
+
+float USimplePhysicsRigidBodyComponent::CalculateMomentOfInertia() const
+{
+	// http://hyperphysics.phy-astr.gsu.edu/hbase/isph.html
+	UE_LOG(LogTemp, Warning, TEXT("CalculateMomentOfInertia"));
+	return 0.4f * Mass * FMath::Square(GetScaledSphereRadius());
+}
+
+
+void USimplePhysicsRigidBodyComponent::SetMass(float NewMass)
+{
+	Mass = NewMass;
+	//CalculatedMomentOfInertia = CalculateMomentOfInertia();
+}
+
+float USimplePhysicsRigidBodyComponent::GetMomentOfInertia() const
+{
+	return (MomentOfInertia <= 0.f) ? CalculateMomentOfInertia() : MomentOfInertia;
 }
 
 
@@ -140,6 +161,8 @@ void USimplePhysicsRigidBodyComponent::SetMovementData(const FMovementData& Move
 {
 	SetVelocity(MovementData.LinearVelocity);
 	SetAngularVelocity(MovementData.AngularVelocity);
+
+	UE_LOG(LogTemp, Warning, TEXT("AngularVelocity: %s"), *AngularVelocity.ToString());
 }
 
 

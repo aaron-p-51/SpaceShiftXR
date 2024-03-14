@@ -42,9 +42,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bEnableSimulationOnRigidBodyCollision;
 
-	/** Mass of this RigidBody */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Mass;
+
 
 	/** Coefficient of friction when sliding along a surface. Normal Range is [0,1], where 0 = No Friction and 1 = high friction */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -74,8 +72,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AngularDamping;
 
+protected:
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float MomentOfInertia;
+
+	/** Mass of this RigidBody */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Mass;
+
+public:
 
 	/** Max Speed (Linear Velocity) of this RigidBody. Set to 0 for no max speed limit */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -137,6 +143,8 @@ public:
 	/** Calculate the RestitutionCoefficient to apply to collision calculations when two RigidBodies collide */
 	float GetRestitutionCoefficient(TObjectPtr<USimplePhysicsRigidBodyComponent> OtherRidigBody) const;
 
+	//FRotator ComputeRotationDelta
+
 	/**
 	 * Given an initial velocity and a time step, compute a new velocity
 	 * Default implementation applies the result of ComputeAcceleration() to velocity.
@@ -182,6 +190,14 @@ public:
 
 	float GetScaledSphereRadius() const;
 
+	float CalculateMomentOfInertia() const;
+
+	void SetMass(float NewMass);
+	float GetMass() const { return Mass; }
+
+	void SetMomentOfInertia(float NewMomentOfInertia) { MomentOfInertia = NewMomentOfInertia; }
+	float GetMomentOfInertia() const;
+
 
 
 protected:
@@ -200,7 +216,9 @@ protected:
 
 	USphereComponent* OwnerSphereComponent;
 
+private:
 
+	float CalculatedMomentOfInertia;
 
 
 	
