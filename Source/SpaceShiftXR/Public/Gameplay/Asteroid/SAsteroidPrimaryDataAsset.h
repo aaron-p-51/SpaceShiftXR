@@ -34,6 +34,9 @@ public:
 	UPROPERTY(EditAnywhere)
 	float DefaultMass;
 
+	UPROPERTY(EditAnywhere)
+	float MomentOfInertia;
+
 	/** Minimim world scale of the asteroid actor */
 	UPROPERTY(EditAnywhere)
 	float MinScale;

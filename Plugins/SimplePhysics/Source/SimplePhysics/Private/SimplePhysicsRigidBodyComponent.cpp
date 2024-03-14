@@ -130,6 +130,19 @@ void USimplePhysicsRigidBodyComponent::SetVelocity(const FVector& NewVelocity, b
 }
 
 
+void USimplePhysicsRigidBodyComponent::SetAngularVelocity(const FVector& NewAngularVelocity)
+{
+	AngularVelocity = LimitAngularVelocity(NewAngularVelocity);
+}
+
+
+void USimplePhysicsRigidBodyComponent::SetMovementData(const FMovementData& MovementData)
+{
+	SetVelocity(MovementData.LinearVelocity);
+	SetAngularVelocity(MovementData.AngularVelocity);
+}
+
+
 float USimplePhysicsRigidBodyComponent::GetRestitutionCoefficient(TObjectPtr<USimplePhysicsRigidBodyComponent> OtherRidigBody) const
 {
 	const float OtherRigidBodyBounciness = OtherRidigBody->Bounciness;
@@ -181,6 +194,19 @@ FVector USimplePhysicsRigidBodyComponent::LimitVelocityFromCurrent()
 	}
 
 	return ConstrainDirectionToPlane(Velocity);
+}
+
+
+FVector USimplePhysicsRigidBodyComponent::LimitAngularVelocity(FVector NewAngularVelocity) const
+{
+	const float CurrentMaxAngularVelocity = GetMaxAngularVelocity();
+	if (CurrentMaxAngularVelocity > 0.f)
+	{
+		NewAngularVelocity = NewAngularVelocity.GetClampedToMaxSize(CurrentMaxAngularVelocity);
+	}
+
+	// TODO: Contrain rotation to plane
+	return NewAngularVelocity;
 }
 
 

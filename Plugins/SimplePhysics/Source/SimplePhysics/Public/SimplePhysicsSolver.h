@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "SimplePhysics.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "SimplePhysicsSolver.generated.h"
 
@@ -51,7 +52,7 @@ protected:
 	virtual bool ComputeRigidBodyCollision(const FHitResult& Hit, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody1, TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody2, FVector& Velocity1, FVector& Velocity2, FRotator& AngularVelocity1, FRotator& AngularVelocity2) const;
 
 	/** Computes the result of RigidBody bouncing off a non Simple Physics Rigid Body actor */
-	virtual FVector ComputeBounceResult(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta);
+	virtual bool ComputeBounceResult(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta, FMovementData& ResultMovementData);
 
 	/** Return true if RigidBody is able to simulate this frame */
 	virtual bool CanSimulateRigidBodyMovement(TObjectPtr<USimplePhysicsRigidBodyComponent> RigidBody, float DeltaTime) const;

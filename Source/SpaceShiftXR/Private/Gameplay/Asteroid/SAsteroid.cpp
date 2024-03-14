@@ -110,6 +110,7 @@ void ASAsteroid::InitializeAsteroid(TObjectPtr<USAsteroidPrimaryDataAsset> Aster
 	
 	const float CenterScale = (DataAsset->MinScale + DataAsset->MaxScale) / 2.f;
 	SimpleRigidBodyComp->Mass = DataAsset->DefaultMass * Size / CenterScale;
+	SimpleRigidBodyComp->MomentOfInertia = DataAsset->MomentOfInertia;
 
 	if (MassOverride != 0.f)
 	{

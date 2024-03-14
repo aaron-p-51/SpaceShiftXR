@@ -10,6 +10,9 @@
 class USimplePhysicsSolver;
 class USphereComponent;
 
+
+
+
 /**
  * 
  */
@@ -74,9 +77,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float MomentOfInertia;
 
-	/** Max Speed if this RigidBody. Set to 0 for no max speed limit */
+	/** Max Speed (Linear Velocity) of this RigidBody. Set to 0 for no max speed limit */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float MaxSpeed;
+
+	/** Max Angular Velocity of this RigidBody. Set to 0 for no max angular velocity */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float MaxAngularVelocity;
 
 	/** Determine how to scale Bounciness when this RigidBody collides with another RigidBody  */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -90,7 +97,7 @@ public:
 	float GravityScale;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FRotator AngularVelocity;
+	FVector AngularVelocity;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float TempScale;
@@ -107,6 +114,8 @@ public:
 	virtual void InitializeComponent() override;
 	//End UMovementComponent Interface
 
+	float GetMaxAngularVelocity() const { return MaxAngularVelocity; }
+
 	void AddForce(const FVector& Force);
 	bool HasPendingForce() const { return PendingForce.SquaredLength() > 0.f; }
 	FVector GetPendingForce() const { return PendingForce; }
@@ -120,6 +129,10 @@ public:
 
 	/** Set the velocity of the UpdatedComponent. Be default will call UpdateComponentVelocity in base class */
 	void SetVelocity(const FVector& NewVelocity, bool UpdateVelocity = true);
+
+	void SetAngularVelocity(const FVector& NewAngularVelocity);
+
+	void SetMovementData(const FMovementData& MovementData);
 
 	/** Calculate the RestitutionCoefficient to apply to collision calculations when two RigidBodies collide */
 	float GetRestitutionCoefficient(TObjectPtr<USimplePhysicsRigidBodyComponent> OtherRidigBody) const;
@@ -138,6 +151,8 @@ public:
 	FVector LimitVelocity(FVector NewVelocity) const;
 	/** Limit Velocity to have a length no greater than MaxSpeed */
 	FVector LimitVelocityFromCurrent();
+
+	FVector LimitAngularVelocity(FVector NewAngularVelocity) const;
 
 	/** Compute the acceleration that will be applied */
 	FVector ComputeAcceleration(const FVector& InitialVelocity, float DeltaTime) const;
