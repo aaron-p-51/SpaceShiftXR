@@ -46,7 +46,7 @@ float USimplePhysicsRigidBodyComponent::GetScaledSphereRadius() const
 float USimplePhysicsRigidBodyComponent::CalculateMomentOfInertia() const
 {
 	// http://hyperphysics.phy-astr.gsu.edu/hbase/isph.html
-	UE_LOG(LogTemp, Warning, TEXT("CalculateMomentOfInertia"));
+	//UE_LOG(LogTemp, Warning, TEXT("CalculateMomentOfInertia"));
 	return 0.4f * Mass * FMath::Square(GetScaledSphereRadius());
 }
 
@@ -249,7 +249,7 @@ void USimplePhysicsRigidBodyComponent::SetMovementData(const FMovementData& Move
 	SetVelocity(MovementData.LinearVelocity);
 	SetAngularVelocity(MovementData.AngularVelocity);
 
-	UE_LOG(LogTemp, Warning, TEXT("AngularVelocity: %s"), *AngularVelocity.ToString());
+	//UE_LOG(LogTemp, Warning, TEXT("AngularVelocity: %s"), *AngularVelocity.ToString());
 }
 
 

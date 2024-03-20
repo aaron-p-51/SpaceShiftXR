@@ -147,8 +147,8 @@ void USimplePhysicsSolver::ApplyRigidBodyMovement(TObjectPtr<USimplePhysicsRigid
 	
 
 	const FVector AngularVelocityDelta = RigidBody->ComputeAngularVelocityDelta(RigidBody->AngularVelocity, DeltaTime);
-	UE_LOG(LogTemp, Warning, TEXT("AngularVelocityDelta: %s"), *AngularVelocityDelta.ToString());
-	RigidBody->ApplyRotationDelta(FRotator(AngularVelocityDelta.Y, AngularVelocityDelta.Z, AngularVelocityDelta.X));
+	//UE_LOG(LogTemp, Warning, TEXT("AngularVelocityDelta: %s"), *AngularVelocityDelta.ToString());
+	//RigidBody->ApplyRotationDelta(FRotator(AngularVelocityDelta.Y, AngularVelocityDelta.Z, AngularVelocityDelta.X));
 	//RigidBody->AddAngularVelocity(AngularVelocityDelta);
 
 	//FVector DeltaRotation = (RigidBody->AngularVelocity * DeltaTime);
@@ -333,24 +333,20 @@ bool USimplePhysicsSolver::ComputeBounceResult(TObjectPtr<USimplePhysicsRigidBod
 
 		const float RelativeSpeedAlongNormal = VelocityDotNormal; //FVector::DotProduct(RelativeVelocity, Hit.Normal);
 		float ImpulseMagnitude = -(1.0f) * RelativeSpeedAlongNormal;
-		if (ImpulseMagnitude > 0.f)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Should Not Be here!!!"));
-			//ImpulseMagnitude = 0.f;
-		}
+
 
 		float DeltaAngularVelocityMagnitude = ImpulseMagnitude / RigidBody->GetMomentOfInertia();
 
 
 		const FVector CollisionPointRelativeToCenter = Hit.ImpactPoint - RigidBody->UpdatedComponent->GetComponentLocation();
 		FVector AxisOfRotation = FVector::CrossProduct(CollisionPointRelativeToCenter, Hit.Normal).GetSafeNormal();
-		UE_LOG(LogTemp, Warning, TEXT("Surface Normal: %s"), *Hit.Normal.ToString());
+		//UE_LOG(LogTemp, Warning, TEXT("Surface Normal: %s"), *Hit.Normal.ToString());
 		if (FMath::Abs(Hit.Normal.Z) < 0.9f)
 		{
 			AxisOfRotation *= -1.f;
 		}
 
-		UE_LOG(LogTemp, Warning, TEXT("AxisOfRotation: %s"), *AxisOfRotation.ToString());
+		//UE_LOG(LogTemp, Warning, TEXT("AxisOfRotation: %s"), *AxisOfRotation.ToString());
 
 		const FVector DeltaAngularVelocity = AxisOfRotation * DeltaAngularVelocityMagnitude * RigidBody->TempScale;
 
@@ -534,7 +530,7 @@ bool USimplePhysicsSolver::ComputeRigidBodyCollision(const FHitResult& Hit, TObj
 
 	float AngularImpulseMagnitude1 = FVector::DotProduct(LeverArm1, CollisionNormal) / RigidBody1->GetMomentOfInertia();
 	float AngularImpulseMagnitude2 = FVector::DotProduct(LeverArm2, CollisionNormal) / RigidBody2->GetMomentOfInertia();
-	UE_LOG(LogTemp, Warning, TEXT("AngularImpulseMagnitude1: %f"), AngularImpulseMagnitude1);
+	//UE_LOG(LogTemp, Warning, TEXT("AngularImpulseMagnitude1: %f"), AngularImpulseMagnitude1);
 
 	FVector AngularVelocity1 = RigidBody1->AngularVelocity + (AngularImpulseMagnitude1 * AngularDirection1);
 	FVector AngularVelocity2 = RigidBody2->AngularVelocity + (AngularImpulseMagnitude2 * AngularDirection2);

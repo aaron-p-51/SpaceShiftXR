@@ -45,16 +45,17 @@ void ASAsteroid::BeginPlay()
 	Super::BeginPlay();
 
 #if WITH_EDITOR
-	if (DataAsset)
-	{
-		InitializeAsteroid(DataAsset);
-	}
+	//if (DataAsset)
+	//{
+	//	InitializeAsteroid(DataAsset);
+	//}
 
-	if (SizeOverride == 0.f)
+	/*if (SizeOverride != 0.f)
 	{
-		const float Size = (DataAsset->MinScale + DataAsset->MaxScale) / 2.f;
-		SetActorScale3D(FVector(Size, Size, Size));
-	}
+		const FVector Size = FVector:: (DataAsset->MinScale + DataAsset->MaxScale) / 2.f;
+		c
+		SetActorScale3D(FVector::OneVector * Size);
+	}*/
 #endif
 
 }
@@ -87,6 +88,7 @@ void ASAsteroid::InitializeAsteroid(TObjectPtr<USAsteroidPrimaryDataAsset> Aster
 		MeshComp->SetStaticMesh(DataAsset->Mesh);
 		MeshComp->SetRelativeTransform(DataAsset->MeshLocalTransform);
 		MeshComp->SetVisibility(true, true);
+		MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 
 	if (SphereComp)
@@ -95,9 +97,11 @@ void ASAsteroid::InitializeAsteroid(TObjectPtr<USAsteroidPrimaryDataAsset> Aster
 		//SphereComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
 		SphereComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 		//SphereComp->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
+
 	}
 
 	Health = DataAsset->Health;
+	UE_LOG(LogTemp, Warning, TEXT("Health Set To: %f"), Health);
 
 	bHasFragments = (DataAsset->FragmentCount > 0) && (DataAsset->AsteroidFragments != nullptr);
 
@@ -232,7 +236,7 @@ void ASAsteroid::AsteroidDestroyed()
 	if (SphereComp)
 	{
 		SphereComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		SphereComp->SetGenerateOverlapEvents(false);
+		//SphereComp->SetGenerateOverlapEvents(false);
 	}
 
 	if (auto Subsystem = GetPoolSubsystem())
@@ -243,9 +247,18 @@ void ASAsteroid::AsteroidDestroyed()
 			{
 				const FVector WorldPosition = Position + GetActorLocation();
 				const FRotator RandomRotation(FMath::RandRange(-180.f, 180.f), FMath::RandRange(-180.f, 180.f), FMath::RandRange(-180.f, 180.f));
-				if (ASAsteroid* Asteroid = Subsystem->SpawnFromPool<ASAsteroid>(ASAsteroid::StaticClass(), WorldPosition, RandomRotation))
+				if (ASAsteroid* Asteroid = Subsystem->SpawnFromPool<ASAsteroid>(AsteroidFragmentClass, WorldPosition, RandomRotation))
 				{
 					Asteroid->InitializeAsteroid(DataAsset->AsteroidFragments);
+					Asteroid->SimpleRigidBodyComp->SetSimulationEnabled(true);
+
+					FVector Direction = Asteroid->GetActorLocation() - GetActorLocation();
+					Direction.Normalize();
+
+					Asteroid->SimpleRigidBodyComp->SetVelocity(Direction * FragmentTestForce);
+
+						
+
 				}
 			}	
 		}
@@ -281,7 +294,7 @@ void ASAsteroid::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
 	
-	if (PropertyChangedEvent.Property != nullptr && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(ASAsteroid, DataAsset))
+	/*if (PropertyChangedEvent.Property != nullptr && PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(ASAsteroid, DataAsset))
 	{
 		if (DataAsset)
 		{
@@ -308,7 +321,7 @@ void ASAsteroid::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				SetActorScale3D(FVector(SizeOverride, SizeOverride, SizeOverride));
 			}
 		}
-	}
+	}*/
 }
 #endif
 

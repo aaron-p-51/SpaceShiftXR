@@ -52,6 +52,12 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetVelocity(const FVector& Velocity);
 
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ASAsteroid> AsteroidFragmentClass;
+
+	UPROPERTY(EditAnywhere)
+	float FragmentTestForce;
+
 protected:
 
 #if WITH_EDITOR
