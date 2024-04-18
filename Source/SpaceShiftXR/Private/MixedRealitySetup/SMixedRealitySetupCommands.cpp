@@ -304,7 +304,7 @@ void USLoadSceneFromDeviceCommand::Cleanup()
 //
 // BeginUSLoadPresetSceneCommand
 //
-#if WITH_EDITOR
+
 USLoadPresetSceneCommand* USLoadPresetSceneCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer, FString* PresetRoom, TObjectPtr<AMRUKAnchorActorSpawner> Spawner)
 {
 	auto Command = NewObject<USLoadPresetSceneCommand>();
@@ -390,7 +390,7 @@ void USLoadPresetSceneCommand::Cleanup()
 
 	Super::Cleanup();
 }
-#endif
+
 
 //
 // Begin USLoadGloblaMeshFromDeviceCommand
@@ -565,7 +565,7 @@ void USDisableGlobalCollisionCommand::Execute()
 // 
 // Begin USApplyTextureToWallsCommand
 //
-#if WITH_EDITOR
+
 TObjectPtr<USApplyTextureToWallsCommand> USApplyTextureToWallsCommand::MakeCommand(ISMixedRealityCommandIssuer* Issuer, FPresetRoomMaterials Materials)
 {
 	auto Command = NewObject<USApplyTextureToWallsCommand>();
@@ -623,4 +623,3 @@ void USApplyTextureToWallsCommand::Execute()
 	CommandComplete(false);
 }
 
-#endif

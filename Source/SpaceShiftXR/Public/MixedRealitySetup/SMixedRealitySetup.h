@@ -59,6 +59,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetPresetRoomConfig(FString RoomConfig);
 
+	UFUNCTION(BlueprintCallable)
 	ESetupState GetSetupState() const { return SetupState; }
 
 private:
@@ -78,6 +79,8 @@ private:
 	bool bSetupInProgress;
 
 	void BuildCommandQueue();
+
+
 
 protected:
 	// Called when the game starts or when spawned
